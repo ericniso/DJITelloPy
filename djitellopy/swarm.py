@@ -12,7 +12,6 @@ from .tello import Tello, TelloException
 from .enforce_types import enforce_types
 
 
-@enforce_types
 class TelloSwarm:
     """Swarm library for controlling multiple Tellos simultaneously
     """
