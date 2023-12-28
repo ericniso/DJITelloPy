@@ -1,20 +1,12 @@
-import logging
 import socket
 from threading import Thread
 from .enforce_types import enforce_types
+from .logger import TELLO_LOGGER
+
 
 @enforce_types
 class TelloCommunication:
     """Handles communication with the Tello drone."""
-
-    # Set up logger
-    HANDLER = logging.StreamHandler()
-    FORMATTER = logging.Formatter('[%(levelname)s] %(filename)s - %(lineno)d - %(message)s')
-    HANDLER.setFormatter(FORMATTER)
-
-    LOGGER = logging.getLogger('djitellopy')
-    LOGGER.addHandler(HANDLER)
-    LOGGER.setLevel(logging.INFO)
 
     CONTROL_UDP_PORT = 8889
     STATE_UDP_PORT = 8890
@@ -64,7 +56,7 @@ class TelloCommunication:
                 if address[0] in self.udp_control_handlers:
                     self.udp_control_handlers[address[0]](data, address)
             except Exception as e:
-                TelloCommunication.LOGGER.error(e)
+                TELLO_LOGGER.error(e)
 
     def _receive_state_data(self):
         """Receive state data from the Tello."""
@@ -75,4 +67,4 @@ class TelloCommunication:
                 if address[0] in self.udp_state_handlers:
                     self.udp_state_handlers[address[0]](data, address)
             except Exception as e:
-                TelloCommunication.LOGGER.error(e)
+                TELLO_LOGGER.error(e)

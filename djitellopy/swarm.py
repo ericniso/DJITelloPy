@@ -7,6 +7,7 @@ from threading import Thread, Barrier
 from queue import Queue
 from typing import List, Callable
 
+from .logger import TELLO_LOGGER
 from .communication import TelloCommunication
 from .tello import Tello, TelloException
 from .enforce_types import enforce_types
