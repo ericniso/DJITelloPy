@@ -1,10 +1,13 @@
 """Library for controlling multiple DJI Ryze Tello drones.
 """
 
+import json
+
 from threading import Thread, Barrier
 from queue import Queue
 from typing import List, Callable
 
+from .communication import TelloCommunication
 from .tello import Tello, TelloException
 from .enforce_types import enforce_types
 
@@ -19,6 +22,34 @@ class TelloSwarm:
     funcBarier: Barrier
     funcQueues: List[Queue]
     threads: List[Thread]
+
+    @staticmethod
+    def fromJson(path: str):
+        """Create TelloSwarm from a json file. The file should contain a list of IP addresses.
+
+        The json structure should look like this:
+            
+            ```json
+            [
+                {
+                    "ip": "<IP_ADDRESS>",
+                    "vs_port": <VIDEO_STREAM_PORT>
+                }
+            ]
+            ```
+
+        Arguments:
+            path: path to the json file
+        """
+
+        with open(path, 'r', encoding='utf-8') as fd:
+            definition = json.load(fd)
+
+        tellos = []
+        for d in definition:
+            tellos.append(Tello(host=d['ip'], vs_udp=d['vs_port']))
+
+        return TelloSwarm(tellos)
 
     @staticmethod
     def fromFile(path: str):
@@ -54,7 +85,14 @@ class TelloSwarm:
         Arguments:
             tellos: list of [Tello][tello] instances
         """
+        self.communication = TelloCommunication()
         self.tellos = tellos
+
+        for i, tello in enumerate(self.tellos):
+            self.communication.add_udp_control_handler(tello.address[0], tello.udp_control_receiver)
+            self.communication.add_udp_state_handler(tello.address[0], tello.udp_state_receiver)
+            tello.set_send_command_fn(self.communication.send_command)
+
         self.barrier = Barrier(len(tellos))
         self.funcBarrier = Barrier(len(tellos) + 1)
         self.funcQueues = [Queue() for tello in tellos]
@@ -74,6 +112,10 @@ class TelloSwarm:
             thread = Thread(target=worker, daemon=True, args=(i,))
             thread.start()
             self.threads.append(thread)
+
+    def start(self):
+        """Start the communication threads."""
+        self.communication.start()
 
     def sequential(self, func: Callable[[int, Tello], None]):
         """Call `func` for each tello sequentially. The function retrieves
