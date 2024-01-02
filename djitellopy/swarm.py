@@ -181,6 +181,17 @@ class TelloSwarm:
 
         return [(tello.address[0], tello.get_frame_read()) for tello in self.tellos]
 
+    def by_ip(self, ip: str):
+        """Get a tello by its IP address."""
+
+        tello_found = None
+        for tello in self.tellos:
+            if tello.address[0] == ip:
+                tello_found = tello
+                break
+        
+        return tello_found
+
 
     def __getattr__(self, attr):
         """Call a standard tello function in parallel on all tellos.
