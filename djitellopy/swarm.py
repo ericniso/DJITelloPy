@@ -188,19 +188,6 @@ class TelloSwarm:
         ```
         """
         return self.barrier.wait(timeout)
-    
-    def get_video_streams(self):
-        """Get a list of all video streams of the swarm.
-
-        ```python
-        swarm.streamon()
-
-        for ip, stream in swarm.get_video_streams():
-            cv2.imshow(ip, stream.frame)
-        ```
-        """
-
-        return [(tello.address[0], tello.get_frame_read()) for tello in self.tellos]
 
     def by_ip(self, ip: str):
         """Get a tello by its IP address."""
