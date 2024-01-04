@@ -46,10 +46,10 @@ class TelloSwarm:
         with open(path, 'r', encoding='utf-8') as fd:
             definition = json.load(fd)
 
-        return TelloSwarm.fromJsonDict(definition)
+        return TelloSwarm.fromJsonList(definition)
 
     @staticmethod
-    def fromJsonDict(definition: dict):
+    def fromJsonList(definition: list):
         """Create TelloSwarm from a json object.
 
         The json structure should look like this:
