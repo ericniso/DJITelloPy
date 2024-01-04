@@ -25,7 +25,7 @@ class TelloSwarm:
     threads: List[Thread]
 
     @staticmethod
-    def fromJson(path: str):
+    def fromJsonFile(path: str):
         """Create TelloSwarm from a json file. The file should contain a list of IP addresses.
 
         The json structure should look like this:
@@ -45,6 +45,27 @@ class TelloSwarm:
 
         with open(path, 'r', encoding='utf-8') as fd:
             definition = json.load(fd)
+
+        return TelloSwarm.fromJsonDict(definition)
+
+    @staticmethod
+    def fromJsonDict(definition: dict):
+        """Create TelloSwarm from a json object.
+
+        The json structure should look like this:
+            
+            ```json
+            [
+                {
+                    "ip": "<IP_ADDRESS>",
+                    "vs_port": <VIDEO_STREAM_PORT>
+                }
+            ]
+            ```
+
+        Arguments:
+            definition: json object dict
+        """
 
         tellos = []
         for d in definition:
