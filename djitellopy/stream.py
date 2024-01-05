@@ -95,7 +95,7 @@ class TelloStream:
     
     TELLO_IP = '192.168.10.1'
 
-    VS_UDP_IP = '0.0.0.0'
+    VS_UDP_IP = '230.230.100.1'
     DEFAULT_VS_UDP_PORT = 11111
     VS_UDP_PORT = DEFAULT_VS_UDP_PORT
 
@@ -103,17 +103,19 @@ class TelloStream:
 
     def __init__(self,
                  host=TELLO_IP,
-                 vs_udp=VS_UDP_PORT) -> None:
+                 multicast_vs_host=VS_UDP_IP,
+                 multicast_vs_port=VS_UDP_PORT) -> None:
         
         self.host = host
-        self.vs_udp_port = vs_udp
+        self.vs_udp_host = multicast_vs_host
+        self.vs_udp_port = multicast_vs_port
         self.background_frame_read = None
 
     def get_udp_video_address(self) -> str:
         """Internal method, you normally wouldn't call this youself.
         """
         address_schema = 'udp://@{ip}:{port}'
-        address = address_schema.format(ip=self.VS_UDP_IP, port=self.vs_udp_port)
+        address = address_schema.format(ip=self.vs_udp_host, port=self.vs_udp_port)
         return address
     
     def get_frame_read(self, with_queue = False, max_queue_len = 32) -> 'BackgroundFrameRead':

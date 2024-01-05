@@ -34,6 +34,7 @@ class TelloSwarm:
             [
                 {
                     "ip": "<IP_ADDRESS>",
+                    "vs_host": "<VIDEO_STREAM_HOST>",
                     "vs_port": <VIDEO_STREAM_PORT>
                 }
             ]
@@ -58,6 +59,7 @@ class TelloSwarm:
             [
                 {
                     "ip": "<IP_ADDRESS>",
+                    "vs_host": "<VIDEO_STREAM_HOST>",
                     "vs_port": <VIDEO_STREAM_PORT>
                 }
             ]
@@ -69,35 +71,7 @@ class TelloSwarm:
 
         tellos = []
         for d in definition:
-            tellos.append(Tello(host=d['ip'], vs_udp=d['vs_port']))
-
-        return TelloSwarm(tellos)
-
-    @staticmethod
-    def fromFile(path: str):
-        """Create TelloSwarm from file. The file should contain one IP address per line.
-
-        Arguments:
-            path: path to the file
-        """
-        with open(path, 'r') as fd:
-            ips = fd.readlines()
-
-        return TelloSwarm.fromIps(ips)
-
-    @staticmethod
-    def fromIps(ips: list):
-        """Create TelloSwarm from a list of IP addresses.
-
-        Arguments:
-            ips: list of IP Addresses
-        """
-        if not ips:
-            raise TelloException("No ips provided")
-
-        tellos = []
-        for ip in ips:
-            tellos.append(Tello(ip.strip()))
+            tellos.append(Tello(host=d['ip'], vs_host=d['vs_host'], vs_udp=d['vs_port']))
 
         return TelloSwarm(tellos)
 
@@ -113,6 +87,7 @@ class TelloSwarm:
         for i, tello in enumerate(self.tellos):
             self.communication.add_udp_control_handler(tello.address[0], tello.udp_control_receiver)
             self.communication.add_udp_state_handler(tello.address[0], tello.udp_state_receiver)
+            self.communication.add_udp_video_stream_multicast(tello.vs_udp_host, tello.vs_udp_port)
             tello.set_send_command_fn(self.communication.send_command)
 
         self.barrier = Barrier(len(tellos))
