@@ -35,8 +35,8 @@ class TelloSwarm:
                 {
                     "ip": "<IP_ADDRESS>",
                     "vs_port": <VIDEO_STREAM_PORT>
-                    "vs_multicast_host": "<VIDEO_STREAM_MULTICAST_HOST>",
-                    "vs_multicast_port": "<VIDEO_STREAM_MULTICAST_PORT>"
+                    "vs_broadcast_host": "<VIDEO_STREAM_BROADCAST_HOST>",
+                    "vs_broadcast_port": "<VIDEO_STREAM_BROADCAST_PORT>"
                 }
             ]
             ```
@@ -61,8 +61,8 @@ class TelloSwarm:
                 {
                     "ip": "<IP_ADDRESS>",
                     "vs_port": <VIDEO_STREAM_PORT>
-                    "vs_multicast_host": "<VIDEO_STREAM_MULTICAST_HOST>",
-                    "vs_multicast_port": "<VIDEO_STREAM_MULTICAST_PORT>"
+                    "vs_broadcast_host": "<VIDEO_STREAM_BROADCAST_HOST>",
+                    "vs_broadcast_port": "<VIDEO_STREAM_BROADCAST_PORT>"
                 }
             ]
             ```
@@ -73,7 +73,7 @@ class TelloSwarm:
 
         tellos = []
         for d in definition:
-            tellos.append(Tello(host=d['ip'], vs_multicast_host=d['vs_multicast_host'], vs_multicast_port=d['vs_multicast_port'], vs_port=d['vs_port']))
+            tellos.append(Tello(host=d['ip'], vs_broadcast_host=d['vs_broadcast_host'], vs_broadcast_port=d['vs_broadcast_port'], vs_port=d['vs_port']))
 
         return TelloSwarm(tellos)
 
@@ -89,7 +89,7 @@ class TelloSwarm:
         for i, tello in enumerate(self.tellos):
             self.communication.add_udp_control_handler(tello.address[0], tello.udp_control_receiver)
             self.communication.add_udp_state_handler(tello.address[0], tello.udp_state_receiver)
-            self.communication.add_udp_video_stream_multicast(tello.vs_port, tello.vs_multicast_host, tello.vs_multicast_port)
+            self.communication.add_udp_video_stream_broadcast(tello.vs_port, tello.vs_broadcast_host, tello.vs_broadcast_port)
             tello.set_send_command_fn(self.communication.send_command)
 
         self.barrier = Barrier(len(tellos))

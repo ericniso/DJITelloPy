@@ -37,19 +37,18 @@ class TelloCommunication:
 
         self.udp_state_handlers[ip] = fn
 
-    def add_udp_video_stream_multicast(self, port: int, multicast_address: str, multicast_port: int):
+    def add_udp_video_stream_broadcast(self, port: int, broadcast_address: str, broadcast_port: int):
 
         current_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         current_socket.bind(('', port))
 
-        multicast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
+        broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self.video_stream_socket[port] = {
             "socket": current_socket,
-            "multicast_address": multicast_address,
-            "multicast_port": multicast_port,
-            "multicast_socket": multicast_socket,
+            "broadcast_address": broadcast_address,
+            "broadcast_port": broadcast_port,
+            "broadcast_socket": broadcast_socket,
         }
 
     def start(self):
@@ -98,10 +97,10 @@ class TelloCommunication:
                 current_socket = self.video_stream_socket[port]["socket"]
                 data, _ = current_socket.recvfrom(2048)
 
-                current_multicast_address = self.video_stream_socket[port]["multicast_address"]
-                current_multicast_port = self.video_stream_socket[port]["multicast_port"]
+                current_broadcast_address = self.video_stream_socket[port]["broadcast_address"]
+                current_broadcast_port = self.video_stream_socket[port]["broadcast_port"]
                 
-                multicast_socket = self.video_stream_socket[port]["multicast_socket"]
-                multicast_socket.sendto(data, (current_multicast_address, current_multicast_port))
+                broadcast_socket = self.video_stream_socket[port]["broadcast_socket"]
+                broadcast_socket.sendto(data, (current_broadcast_address, current_broadcast_port))
             except Exception as e:
                 TELLO_LOGGER.error(e)
