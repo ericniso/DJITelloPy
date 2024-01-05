@@ -96,7 +96,7 @@ class TelloCommunication:
         while True:
             try:
                 current_socket = self.video_stream_socket[port]["socket"]
-                data, _ = current_socket.recvfrom(1024)
+                data, _ = current_socket.recvfrom(2048)
 
                 current_multicast_address = self.video_stream_socket[port]["multicast_address"]
                 current_multicast_port = self.video_stream_socket[port]["multicast_port"]
