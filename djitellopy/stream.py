@@ -95,7 +95,7 @@ class TelloStream:
     
     TELLO_IP = '192.168.10.1'
 
-    VS_UDP_IP = '230.230.100.1'
+    VS_UDP_IP = '0.0.0.0'
     DEFAULT_VS_UDP_PORT = 11111
     VS_UDP_PORT = DEFAULT_VS_UDP_PORT
 
@@ -107,7 +107,7 @@ class TelloStream:
                  vs_broadcast_port=VS_UDP_PORT) -> None:
         
         self.host = host
-        self.vs_broadcast_host = vs_broadcast_host
+        self.vs_broadcast_host = self.VS_UDP_IP
         self.vs_broadcast_port = vs_broadcast_port
         self.background_frame_read = None
 
