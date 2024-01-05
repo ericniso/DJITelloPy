@@ -43,6 +43,7 @@ class TelloCommunication:
         current_socket.bind(('', port))
 
         broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
         self.video_stream_socket[port] = {
             "socket": current_socket,
