@@ -34,8 +34,9 @@ class TelloSwarm:
             [
                 {
                     "ip": "<IP_ADDRESS>",
-                    "vs_host": "<VIDEO_STREAM_HOST>",
                     "vs_port": <VIDEO_STREAM_PORT>
+                    "vs_multicast_host": "<VIDEO_STREAM_MULTICAST_HOST>",
+                    "vs_multicast_port": "<VIDEO_STREAM_MULTICAST_PORT>"
                 }
             ]
             ```
@@ -59,8 +60,9 @@ class TelloSwarm:
             [
                 {
                     "ip": "<IP_ADDRESS>",
-                    "vs_host": "<VIDEO_STREAM_HOST>",
                     "vs_port": <VIDEO_STREAM_PORT>
+                    "vs_multicast_host": "<VIDEO_STREAM_MULTICAST_HOST>",
+                    "vs_multicast_port": "<VIDEO_STREAM_MULTICAST_PORT>"
                 }
             ]
             ```
@@ -71,7 +73,7 @@ class TelloSwarm:
 
         tellos = []
         for d in definition:
-            tellos.append(Tello(host=d['ip'], vs_host=d['vs_host'], vs_udp=d['vs_port']))
+            tellos.append(Tello(host=d['ip'], vs_multicast_host=d['vs_multicast_host'], vs_multicast_port=d['vs_multicast_port'], vs_port=d['vs_port']))
 
         return TelloSwarm(tellos)
 

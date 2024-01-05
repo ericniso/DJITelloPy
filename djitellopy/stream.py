@@ -103,19 +103,19 @@ class TelloStream:
 
     def __init__(self,
                  host=TELLO_IP,
-                 multicast_vs_host=VS_UDP_IP,
-                 multicast_vs_port=VS_UDP_PORT) -> None:
+                 vs_multicast_host=VS_UDP_IP,
+                 vs_multicast_port=VS_UDP_PORT) -> None:
         
         self.host = host
-        self.vs_udp_host = multicast_vs_host
-        self.vs_udp_port = multicast_vs_port
+        self.vs_multicast_host = vs_multicast_host
+        self.vs_multicast_port = vs_multicast_port
         self.background_frame_read = None
 
     def get_udp_video_address(self) -> str:
         """Internal method, you normally wouldn't call this youself.
         """
         address_schema = 'udp://@{ip}:{port}'
-        address = address_schema.format(ip=self.vs_udp_host, port=self.vs_udp_port)
+        address = address_schema.format(ip=self.vs_multicast_host, port=self.vs_multicast_port)
         return address
     
     def get_frame_read(self, with_queue = False, max_queue_len = 32) -> 'BackgroundFrameRead':
@@ -182,7 +182,7 @@ class TelloSwarmStream:
 
         tellos = []
         for d in definition:
-            tellos.append(TelloStream(host=d['ip'], vs_udp=d['vs_port']))
+            tellos.append(TelloStream(host=d['ip'], vs_multicast_host=d['vs_multicast_host'], vs_multicast_port=d['vs_multicast_port']))
 
         return TelloSwarmStream(tellos)
     

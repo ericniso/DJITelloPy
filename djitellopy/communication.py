@@ -37,7 +37,7 @@ class TelloCommunication:
 
         self.udp_state_handlers[ip] = fn
 
-    def add_udp_video_stream_multicast(self, address: str, port: int):
+    def add_udp_video_stream_multicast(self, port: int, multicast_address: str, multicast_port: int):
 
         current_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         current_socket.bind(('', port))
@@ -46,9 +46,9 @@ class TelloCommunication:
         multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
 
         self.video_stream_socket[port] = {
-            "address": address,
-            "port": port,
             "socket": current_socket,
+            "multicast_address": multicast_address,
+            "multicast_port": multicast_port,
             "multicast_socket": multicast_socket,
         }
 
@@ -97,8 +97,10 @@ class TelloCommunication:
             try:
                 current_socket = self.video_stream_socket[port]["socket"]
                 data, _ = current_socket.recvfrom(1024)
-                current_multicast_address = self.video_stream_socket[port]["address"]
-                current_multicast_port = self.video_stream_socket[port]["port"]
+
+                current_multicast_address = self.video_stream_socket[port]["multicast_address"]
+                current_multicast_port = self.video_stream_socket[port]["multicast_port"]
+                
                 multicast_socket = self.video_stream_socket[port]["multicast_socket"]
                 multicast_socket.sendto(data, (current_multicast_address, current_multicast_port))
             except Exception as e:
