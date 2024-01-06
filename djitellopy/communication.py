@@ -19,7 +19,7 @@ class TelloCommunication:
         self.control_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.state_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.video_stream_socket = {}
-        self.video_stream_destinaton = {}
+        self.video_stream_destination = {}
         self.control_socket.bind(('', TelloCommunication.CONTROL_UDP_PORT))
         self.state_socket.bind(('', TelloCommunication.STATE_UDP_PORT))
 
@@ -52,10 +52,10 @@ class TelloCommunication:
 
     def add_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
 
-        if local_port not in self.video_stream_destinaton:
-            self.video_stream_destinaton[local_port] = []
+        if local_port not in self.video_stream_destination:
+            self.video_stream_destination[local_port] = []
         
-        self.video_stream_destinaton[local_port].append((destination_ip, destination_port))
+        self.video_stream_destination[local_port].append((destination_ip, destination_port))
 
     def start(self):
         """Start the communication thread."""
@@ -103,9 +103,9 @@ class TelloCommunication:
                 current_socket = self.video_stream_socket[port]["socket"]
                 data, _ = current_socket.recvfrom(2048)
 
-                if self.video_stream_destinaton[port] is not None:
+                if port in self.video_stream_destination and self.video_stream_destination[port] is not None:
                     forward_socket = self.video_stream_socket[port]["forward_socket"]
-                    for dest_ip, dest_port in self.video_stream_destinaton[port]:
+                    for dest_ip, dest_port in self.video_stream_destination[port]:
                         forward_socket.sendto(data, (dest_ip, dest_port))
 
             except Exception as e:
