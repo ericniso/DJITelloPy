@@ -40,9 +40,9 @@ class Tello:
     TELLO_IP = '192.168.10.1'  # Tello IP address
 
     # Video stream, server socket
-    VS_UDP_IP = '0.0.0.0'
-    DEFAULT_VS_UDP_PORT = 11111
-    VS_UDP_PORT = DEFAULT_VS_UDP_PORT
+    VS_IP = '0.0.0.0'
+    DEFAULT_VS_PORT = 11111
+    VS_PORT = DEFAULT_VS_PORT
 
     CONTROL_UDP_PORT = 8889
     STATE_UDP_PORT = 8890
@@ -85,7 +85,7 @@ class Tello:
     def __init__(self,
                  host=TELLO_IP,
                  retry_count=RETRY_COUNT,
-                 vs_udp=VS_UDP_PORT):
+                 vs_port=VS_PORT):
 
         global drones
 
@@ -100,7 +100,7 @@ class Tello:
 
         TELLO_LOGGER.info("Tello instance was initialized. Host: '{}'. Port: '{}'.".format(host, Tello.CONTROL_UDP_PORT))
 
-        self.vs_udp_port = vs_udp
+        self.vs_port = vs_port
 
     def set_send_command_fn(self, fn):
         """Set the function to use for sending commands to the Tello.
@@ -110,8 +110,8 @@ class Tello:
     def change_vs_udp(self, udp_port):
         """Change the UDP Port for sending video feed from the drone.
         """
-        self.vs_udp_port = udp_port
-        self.send_control_command(f'port 8890 {self.vs_udp_port}')
+        self.vs_port = udp_port
+        self.send_control_command(f'port 8890 {self.vs_port}')
 
     def get_own_udp_object(self):
         """Get own object from the global drones dict. This object is filled
@@ -349,13 +349,6 @@ class Tello:
         """
         return self.get_state_field('bat')
 
-    def get_udp_video_address(self) -> str:
-        """Internal method, you normally wouldn't call this youself.
-        """
-        address_schema = 'udp://@{ip}:{port}'  # + '?overrun_nonfatal=1&fifo_size=5000'
-        address = address_schema.format(ip=self.VS_UDP_IP, port=self.vs_udp_port)
-        return address
-
     def send_command_with_return(self, command: str, timeout: int = RESPONSE_TIMEOUT) -> str:
         """Send command to Tello and wait for its response.
         Internal method, you normally wouldn't call this yourself.
@@ -526,8 +519,8 @@ class Tello:
             If the response is 'Unknown command' you have to update the Tello
             firmware. This can be done using the official Tello app.
         """
-        if self.DEFAULT_VS_UDP_PORT != self.vs_udp_port:
-            self.change_vs_udp(self.vs_udp_port)
+        if self.DEFAULT_VS_PORT != self.vs_port:
+            self.change_vs_udp(self.vs_port)
         self.send_control_command("streamon")
         self.stream_on = True
 
