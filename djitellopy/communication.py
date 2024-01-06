@@ -19,6 +19,7 @@ class TelloCommunication:
         self.control_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.state_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.video_stream_socket = {}
+        self.video_stream_destinaton = {}
         self.control_socket.bind(('', TelloCommunication.CONTROL_UDP_PORT))
         self.state_socket.bind(('', TelloCommunication.STATE_UDP_PORT))
 
@@ -37,20 +38,24 @@ class TelloCommunication:
 
         self.udp_state_handlers[ip] = fn
 
-    def add_udp_video_stream_broadcast(self, port: int, broadcast_address: str, broadcast_port: int):
+    def add_udp_video_stream_handler(self, port: int):
 
         current_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         current_socket.bind(('', port))
 
-        broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        forward_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self.video_stream_socket[port] = {
             "socket": current_socket,
-            "broadcast_address": broadcast_address,
-            "broadcast_port": broadcast_port,
-            "broadcast_socket": broadcast_socket,
+            "forward_socket": forward_socket,
         }
+
+    def add_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
+
+        if local_port not in self.video_stream_destinaton:
+            self.video_stream_destinaton[local_port] = []
+        
+        self.video_stream_destinaton[local_port].append((destination_ip, destination_port))
 
     def start(self):
         """Start the communication thread."""
@@ -98,10 +103,10 @@ class TelloCommunication:
                 current_socket = self.video_stream_socket[port]["socket"]
                 data, _ = current_socket.recvfrom(2048)
 
-                current_broadcast_address = self.video_stream_socket[port]["broadcast_address"]
-                current_broadcast_port = self.video_stream_socket[port]["broadcast_port"]
-                
-                broadcast_socket = self.video_stream_socket[port]["broadcast_socket"]
-                broadcast_socket.sendto(data, (current_broadcast_address, current_broadcast_port))
+                if self.video_stream_destinaton[port] is not None:
+                    forward_socket = self.video_stream_socket[port]["forward_socket"]
+                    for dest_ip, dest_port in self.video_stream_destinaton[port]:
+                        forward_socket.sendto(data, (dest_ip, dest_port))
+
             except Exception as e:
                 TELLO_LOGGER.error(e)

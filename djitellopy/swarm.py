@@ -35,8 +35,6 @@ class TelloSwarm:
                 {
                     "ip": "<IP_ADDRESS>",
                     "vs_port": <VIDEO_STREAM_PORT>
-                    "vs_broadcast_host": "<VIDEO_STREAM_BROADCAST_HOST>",
-                    "vs_broadcast_port": "<VIDEO_STREAM_BROADCAST_PORT>"
                 }
             ]
             ```
@@ -61,8 +59,6 @@ class TelloSwarm:
                 {
                     "ip": "<IP_ADDRESS>",
                     "vs_port": <VIDEO_STREAM_PORT>
-                    "vs_broadcast_host": "<VIDEO_STREAM_BROADCAST_HOST>",
-                    "vs_broadcast_port": "<VIDEO_STREAM_BROADCAST_PORT>"
                 }
             ]
             ```
@@ -73,7 +69,7 @@ class TelloSwarm:
 
         tellos = []
         for d in definition:
-            tellos.append(Tello(host=d['ip'], vs_broadcast_host=d['vs_broadcast_host'], vs_broadcast_port=d['vs_broadcast_port'], vs_port=d['vs_port']))
+            tellos.append(Tello(host=d['ip'], vs_port=d['vs_port']))
 
         return TelloSwarm(tellos)
 
@@ -89,7 +85,7 @@ class TelloSwarm:
         for i, tello in enumerate(self.tellos):
             self.communication.add_udp_control_handler(tello.address[0], tello.udp_control_receiver)
             self.communication.add_udp_state_handler(tello.address[0], tello.udp_state_receiver)
-            self.communication.add_udp_video_stream_broadcast(tello.vs_port, tello.vs_broadcast_host, tello.vs_broadcast_port)
+            self.communication.add_udp_video_stream_handler(tello.vs_port)
             tello.set_send_command_fn(self.communication.send_command)
 
         self.barrier = Barrier(len(tellos))
@@ -177,6 +173,10 @@ class TelloSwarm:
         
         return tello_found
 
+    def add_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
+        """Add a destination for the video stream."""
+
+        self.communication.add_video_stream_destination(local_port, destination_ip, destination_port)
 
     def __getattr__(self, attr):
         """Call a standard tello function in parallel on all tellos.

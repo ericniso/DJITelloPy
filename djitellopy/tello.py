@@ -85,8 +85,6 @@ class Tello:
     def __init__(self,
                  host=TELLO_IP,
                  retry_count=RETRY_COUNT,
-                 vs_broadcast_host=VS_IP,
-                 vs_broadcast_port=VS_PORT,
                  vs_port=VS_PORT):
 
         global drones
@@ -102,8 +100,6 @@ class Tello:
 
         TELLO_LOGGER.info("Tello instance was initialized. Host: '{}'. Port: '{}'.".format(host, Tello.CONTROL_UDP_PORT))
 
-        self.vs_broadcast_host = vs_broadcast_host
-        self.vs_broadcast_port = vs_broadcast_port
         self.vs_port = vs_port
 
     def set_send_command_fn(self, fn):
