@@ -178,6 +178,11 @@ class TelloSwarm:
 
         self.communication.add_video_stream_destination(local_port, destination_ip, destination_port)
 
+    def remove_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
+        """Remove a destination for the video stream."""
+
+        self.communication.remove_video_stream_destination(local_port, destination_ip, destination_port)
+
     def __getattr__(self, attr):
         """Call a standard tello function in parallel on all tellos.
 

@@ -57,6 +57,13 @@ class TelloCommunication:
         
         self.video_stream_destination[local_port].append((destination_ip, destination_port))
 
+    def remove_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
+
+        if local_port not in self.video_stream_destination:
+            return
+
+        self.video_stream_destination[local_port].remove((destination_ip, destination_port))
+
     def start(self):
         """Start the communication thread."""
 
