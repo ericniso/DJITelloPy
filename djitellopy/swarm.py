@@ -79,9 +79,9 @@ class TelloSwarm:
         Arguments:
             tellos: list of [Tello][tello] instances
         """
-        self.communication = TelloCommunication()
         self.tellos = tellos
         self.forward_video_stream = forward_video_stream
+        self.communication = TelloCommunication(self.forward_video_stream)
 
         for i, tello in enumerate(self.tellos):
             self.communication.add_udp_control_handler(tello.address[0], tello.udp_control_receiver)
