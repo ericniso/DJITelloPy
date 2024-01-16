@@ -178,7 +178,7 @@ class TelloSwarm:
     def add_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
         """Add a destination for the video stream."""
 
-        if self.forward_video_stream is False:
+        if not self.forward_video_stream:
             TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
             return
 
@@ -187,7 +187,7 @@ class TelloSwarm:
     def remove_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
         """Remove a destination for the video stream."""
 
-        if self.forward_video_stream is False:
+        if not self.forward_video_stream:
             TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
             return
 

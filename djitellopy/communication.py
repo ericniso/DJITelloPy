@@ -41,7 +41,7 @@ class TelloCommunication:
 
     def add_udp_video_stream_handler(self, port: int):
 
-        if self.forward_video_stream is False:
+        if not self.forward_video_stream:
             TELLO_LOGGER.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
             return
 
@@ -57,7 +57,7 @@ class TelloCommunication:
 
     def add_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
 
-        if self.forward_video_stream is False:
+        if not self.forward_video_stream:
             TELLO_LOGGER.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
             return
 
@@ -68,7 +68,7 @@ class TelloCommunication:
 
     def remove_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
 
-        if self.forward_video_stream is False:
+        if not self.forward_video_stream:
             TELLO_LOGGER.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
             return
         
