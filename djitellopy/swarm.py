@@ -25,7 +25,7 @@ class TelloSwarm:
     threads: List[Thread]
 
     @staticmethod
-    def fromJsonFile(path: str):
+    def fromJsonFile(path: str, forward_video_stream: bool = False):
         """Create TelloSwarm from a json file. The file should contain a list of IP addresses.
 
         The json structure should look like this:
@@ -46,10 +46,10 @@ class TelloSwarm:
         with open(path, 'r', encoding='utf-8') as fd:
             definition = json.load(fd)
 
-        return TelloSwarm.fromJsonList(definition)
+        return TelloSwarm.fromJsonList(definition, forward_video_stream)
 
     @staticmethod
-    def fromJsonList(definition: list):
+    def fromJsonList(definition: list, forward_video_stream: bool = False):
         """Create TelloSwarm from a json object.
 
         The json structure should look like this:
@@ -71,9 +71,9 @@ class TelloSwarm:
         for d in definition:
             tellos.append(Tello(host=d['ip'], vs_port=d['vs_port']))
 
-        return TelloSwarm(tellos)
+        return TelloSwarm(tellos, forward_video_stream)
 
-    def __init__(self, tellos: List[Tello]):
+    def __init__(self, tellos: List[Tello], forward_video_stream: bool = False):
         """Initialize a TelloSwarm instance
 
         Arguments:
@@ -81,11 +81,13 @@ class TelloSwarm:
         """
         self.communication = TelloCommunication()
         self.tellos = tellos
+        self.forward_video_stream = forward_video_stream
 
         for i, tello in enumerate(self.tellos):
             self.communication.add_udp_control_handler(tello.address[0], tello.udp_control_receiver)
             self.communication.add_udp_state_handler(tello.address[0], tello.udp_state_receiver)
-            self.communication.add_udp_video_stream_handler(tello.vs_port)
+            if self.forward_video_stream:
+                self.communication.add_udp_video_stream_handler(tello.vs_port)
             tello.set_send_command_fn(self.communication.send_command)
 
         self.barrier = Barrier(len(tellos))
@@ -176,10 +178,18 @@ class TelloSwarm:
     def add_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
         """Add a destination for the video stream."""
 
+        if self.forward_video_stream is False:
+            TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
+            return
+
         self.communication.add_video_stream_destination(local_port, destination_ip, destination_port)
 
     def remove_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
         """Remove a destination for the video stream."""
+
+        if self.forward_video_stream is False:
+            TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
+            return
 
         self.communication.remove_video_stream_destination(local_port, destination_ip, destination_port)
 

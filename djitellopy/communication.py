@@ -11,9 +11,10 @@ class TelloCommunication:
     CONTROL_UDP_PORT = 8889
     STATE_UDP_PORT = 8890
 
-    def __init__(self):
+    def __init__(self, forward_video_stream: bool = False):
         """Initialize the TelloCommunication object."""
 
+        self.forward_video_stream = forward_video_stream
         self.udp_control_handlers = {}
         self.udp_state_handlers = {}
         self.control_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -40,6 +41,10 @@ class TelloCommunication:
 
     def add_udp_video_stream_handler(self, port: int):
 
+        if self.forward_video_stream is False:
+            TELLO_LOGGER.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
+            return
+
         current_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         current_socket.bind(('', port))
 
@@ -52,6 +57,10 @@ class TelloCommunication:
 
     def add_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
 
+        if self.forward_video_stream is False:
+            TELLO_LOGGER.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
+            return
+
         if local_port not in self.video_stream_destination:
             self.video_stream_destination[local_port] = []
         
@@ -59,6 +68,10 @@ class TelloCommunication:
 
     def remove_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
 
+        if self.forward_video_stream is False:
+            TELLO_LOGGER.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
+            return
+        
         if local_port not in self.video_stream_destination:
             return
 
@@ -72,10 +85,11 @@ class TelloCommunication:
         udp_state_thread = Thread(target=self._receive_state_data)
         udp_state_thread.daemon = True
 
-        for port in self.video_stream_socket:
-            current_thread = Thread(target=self._receive_video_stream_data, args=(port,))
-            current_thread.daemon = True
-            current_thread.start()
+        if self.forward_video_stream is True:
+            for port in self.video_stream_socket:
+                current_thread = Thread(target=self._receive_video_stream_data, args=(port,))
+                current_thread.daemon = True
+                current_thread.start()
 
         udp_control_thread.start()
         udp_state_thread.start()
