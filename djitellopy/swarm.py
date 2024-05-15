@@ -175,23 +175,41 @@ class TelloSwarm:
         
         return tello_found
 
-    def add_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
+    def add_video_stream_host_destination(self, local_port: int, destination_ip: str, destination_port: int):
         """Add a destination for the video stream."""
 
         if not self.forward_video_stream:
             TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
             return
 
-        self.communication.add_video_stream_destination(local_port, destination_ip, destination_port)
+        self.communication.add_video_stream_host_destination(local_port, destination_ip, destination_port)
 
-    def remove_video_stream_destination(self, local_port: int, destination_ip: str, destination_port: int):
+    def add_video_stream_broadcast_destination(self, local_port: int, destination_broadcast_ip: str, destination_broadcast_port: int):
+        """Add a broadcast destination for the video stream."""
+
+        if not self.forward_video_stream:
+            TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
+            return
+
+        self.communication.add_video_stream_broadcast_destination(local_port, destination_broadcast_ip, destination_broadcast_port)
+
+    def remove_video_stream_host_destination(self, local_port: int, destination_ip: str, destination_port: int):
         """Remove a destination for the video stream."""
 
         if not self.forward_video_stream:
             TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
             return
 
-        self.communication.remove_video_stream_destination(local_port, destination_ip, destination_port)
+        self.communication.remove_video_stream_host_destination(local_port, destination_ip, destination_port)
+
+    def remove_video_stream_broadcast_destination(self, local_port: int, destination_broadcast_ip: str, destination_broadcast_port: int):
+        """Remove a destination for the video stream."""
+
+        if not self.forward_video_stream:
+            TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
+            return
+
+        self.communication.remove_video_stream_broadcast_destination(local_port, destination_broadcast_ip, destination_broadcast_port)
 
     def __getattr__(self, attr):
         """Call a standard tello function in parallel on all tellos.
