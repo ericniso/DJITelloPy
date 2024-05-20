@@ -40,7 +40,7 @@ class TelloCommunication:
 
         self.udp_state_handlers[ip] = fn
 
-    def add_udp_video_stream_handler(self, port: int):
+    def add_udp_video_stream_handler(self, if_ip: str, port: int):
 
         if not self.forward_video_stream:
             TELLO_LOGGER.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
@@ -53,6 +53,7 @@ class TelloCommunication:
 
         multicast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+        multicast_socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(if_ip))
 
         self.video_stream_socket[port] = {
             "socket": current_socket,

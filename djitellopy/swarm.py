@@ -25,7 +25,7 @@ class TelloSwarm:
     threads: List[Thread]
 
     @staticmethod
-    def fromJsonFile(path: str, forward_video_stream: bool = False):
+    def fromJsonFile(path: str, if_ip: str, forward_video_stream: bool = False):
         """Create TelloSwarm from a json file. The file should contain a list of IP addresses.
 
         The json structure should look like this:
@@ -46,10 +46,10 @@ class TelloSwarm:
         with open(path, 'r', encoding='utf-8') as fd:
             definition = json.load(fd)
 
-        return TelloSwarm.fromJsonList(definition, forward_video_stream)
+        return TelloSwarm.fromJsonList(definition, if_ip, forward_video_stream)
 
     @staticmethod
-    def fromJsonList(definition: list, forward_video_stream: bool = False):
+    def fromJsonList(definition: list, if_ip: str, forward_video_stream: bool = False):
         """Create TelloSwarm from a json object.
 
         The json structure should look like this:
@@ -71,15 +71,16 @@ class TelloSwarm:
         for d in definition:
             tellos.append(Tello(host=d['ip'], vs_port=d['vs_port']))
 
-        return TelloSwarm(tellos, forward_video_stream)
+        return TelloSwarm(tellos, if_ip, forward_video_stream)
 
-    def __init__(self, tellos: List[Tello], forward_video_stream: bool = False):
+    def __init__(self, tellos: List[Tello], if_ip: str, forward_video_stream: bool = False):
         """Initialize a TelloSwarm instance
 
         Arguments:
             tellos: list of [Tello][tello] instances
         """
         self.tellos = tellos
+        self.if_ip = if_ip
         self.forward_video_stream = forward_video_stream
         self.communication = TelloCommunication(self.forward_video_stream)
 
@@ -87,7 +88,7 @@ class TelloSwarm:
             self.communication.add_udp_control_handler(tello.address[0], tello.udp_control_receiver)
             self.communication.add_udp_state_handler(tello.address[0], tello.udp_state_receiver)
             if self.forward_video_stream:
-                self.communication.add_udp_video_stream_handler(tello.vs_port)
+                self.communication.add_udp_video_stream_handler(self.if_ip, tello.vs_port)
             tello.set_send_command_fn(self.communication.send_command)
 
         self.barrier = Barrier(len(tellos))
