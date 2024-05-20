@@ -67,7 +67,7 @@ class TelloSwarm:
 
         tellos = []
         for d in definition:
-            tellos.append(Tello(host=d['ip'], vs_port=d['vs_port']))
+            tellos.append(Tello(id=d['id'], host=d['ip'], vs_port=d['vs_port']))
 
         return TelloSwarm(tellos, if_ip, forward_video_stream)
 
