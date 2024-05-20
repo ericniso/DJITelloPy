@@ -8,8 +8,6 @@ import time
 from collections import deque
 from threading import Thread, Lock
 from typing import Optional, Union, Type, Dict
-
-from .enforce_types import enforce_types
 from .logger import TELLO_LOGGER
 
 import av
@@ -23,7 +21,6 @@ class TelloException(Exception):
     pass
 
 
-@enforce_types
 class Tello:
     """Python wrapper to interact with the Ryze Tello drone using the official Tello api.
     Tello API documentation:

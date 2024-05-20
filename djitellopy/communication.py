@@ -1,10 +1,8 @@
 import socket
 from threading import Thread
-from .enforce_types import enforce_types
 from .logger import TELLO_LOGGER
 
 
-@enforce_types
 class TelloCommunication:
     """Handles communication with the Tello drone."""
 
