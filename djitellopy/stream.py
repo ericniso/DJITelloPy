@@ -120,7 +120,7 @@ class TelloStream:
             return address_schema.format(ip=self.vs_host, port=self.vs_port)
 
         address_schema = 'udp://@{ip}:{port}?localaddr={if_ip}'
-        return address_schema.format(ip=self.vs_host, port=self.vs_port, if_ip=self.if_ip)
+        return address_schema.format(ip=self.host, port=self.vs_port, if_ip=self.if_ip)
     
     def get_frame_read(self, with_queue = False, max_queue_len = 32) -> 'BackgroundFrameRead':
         """Get the BackgroundFrameRead object from the camera drone. Then, you just need to call
