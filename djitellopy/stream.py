@@ -102,10 +102,12 @@ class TelloStream:
     FRAME_GRAB_TIMEOUT = 5
 
     def __init__(self,
+                 id,
                  host=TELLO_IP,
                  vs_port=VS_UDP_PORT,
                  if_ip=None) -> None:
         
+        self.id = id
         self.host = host
         self.vs_host = self.VS_UDP_IP
         self.vs_port = vs_port
@@ -186,7 +188,7 @@ class TelloSwarmStream:
 
         tellos = []
         for d in definition:
-            tellos.append(TelloStream(host=d['ip'], vs_port=d['vs_port'], if_ip=if_ip))
+            tellos.append(TelloStream(id=d['id'], host=d['ip'], vs_port=d['vs_port'], if_ip=if_ip))
 
         return TelloSwarmStream(tellos)
     
@@ -204,4 +206,4 @@ class TelloSwarmStream:
         ```
         """
 
-        return [(stream.host, stream.get_frame_read()) for stream in self.streams]
+        return [(stream.id, stream.get_frame_read()) for stream in self.streams]

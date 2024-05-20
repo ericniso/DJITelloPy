@@ -80,12 +80,14 @@ class Tello:
     is_flying = False
 
     def __init__(self,
+                 id,
                  host=TELLO_IP,
                  retry_count=RETRY_COUNT,
                  vs_port=VS_PORT):
 
         global drones
 
+        self.id = id
         self.address = (host, Tello.CONTROL_UDP_PORT)
         self.send_command_fn = None
         self.stream_on = False
