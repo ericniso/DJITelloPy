@@ -103,19 +103,24 @@ class TelloStream:
 
     def __init__(self,
                  host=TELLO_IP,
-                 vs_port=VS_UDP_PORT) -> None:
+                 vs_port=VS_UDP_PORT,
+                 if_ip=None) -> None:
         
         self.host = host
         self.vs_host = self.VS_UDP_IP
         self.vs_port = vs_port
+        self.if_ip = if_ip
         self.background_frame_read = None
 
     def get_udp_video_address(self) -> str:
         """Internal method, you normally wouldn't call this youself.
         """
-        address_schema = 'udp://@{ip}:{port}'
-        address = address_schema.format(ip=self.vs_host, port=self.vs_port)
-        return address
+        if self.if_ip is None:
+            address_schema = 'udp://@{ip}:{port}'
+            return address_schema.format(ip=self.vs_host, port=self.vs_port)
+
+        address_schema = 'udp://@{ip}:{port}?localaddr={if_ip}'
+        return address_schema.format(ip=self.vs_host, port=self.vs_port, if_ip=self.if_ip)
     
     def get_frame_read(self, with_queue = False, max_queue_len = 32) -> 'BackgroundFrameRead':
         """Get the BackgroundFrameRead object from the camera drone. Then, you just need to call
@@ -137,7 +142,7 @@ class TelloStream:
 class TelloSwarmStream:
 
     @staticmethod
-    def fromJsonFile(path: str):
+    def fromJsonFile(path: str, if_ip: str):
         """Create TelloSwarm from a json file. The file should contain a list of IP addresses.
 
         The json structure should look like this:
@@ -161,7 +166,7 @@ class TelloSwarmStream:
         return TelloSwarmStream.fromJsonList(definition)
 
     @staticmethod
-    def fromJsonList(definition: list):
+    def fromJsonList(definition: list, if_ip: str):
         """Create TelloSwarm from a json object.
 
         The json structure should look like this:
@@ -181,7 +186,7 @@ class TelloSwarmStream:
 
         tellos = []
         for d in definition:
-            tellos.append(TelloStream(host=d['ip'], vs_port=d['vs_port']))
+            tellos.append(TelloStream(host=d['ip'], vs_port=d['vs_port'], if_ip=if_ip))
 
         return TelloSwarmStream(tellos)
     
