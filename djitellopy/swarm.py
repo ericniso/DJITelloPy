@@ -2,11 +2,10 @@
 """
 
 import json
-
+import time
 from threading import Thread, Barrier
 from queue import Queue
 from typing import List, Callable, Union, Dict
-
 from .logger import TelloLogger
 from .communication import TelloCommunication
 from .tello import Tello, TelloException
@@ -15,12 +14,6 @@ from .tello import Tello, TelloException
 class TelloSwarm:
     """Swarm library for controlling multiple Tellos simultaneously
     """
-
-    tellos: List[Tello]
-    barrier: Barrier
-    funcBarier: Barrier
-    funcQueues: List[Queue]
-    threads: List[Thread]
 
     @staticmethod
     def fromJsonFile(path: str, iface_ip: str, forward_video_stream: bool = False) -> 'TelloSwarm':
@@ -78,25 +71,28 @@ class TelloSwarm:
             tellos: list of [Tello] instances
         """
         self.definition: List[Dict] = definition
-        self.tellos: List[Tello] = tellos
+        self.connected_tellos: List[Tello] = tellos
+        self.unreachable_tellos: List[Tello] = []
         self.iface_ip: str = iface_ip
         self.forward_video_stream: bool = forward_video_stream
         self.communication: TelloCommunication = TelloCommunication(self.forward_video_stream)
+        self.reachable_tellos_thread = Thread(target=self._check_reachable_tellos, daemon=True)
+        self.try_tellos_reconnect_thread = Thread(target=self._try_tello_reconnect, daemon=True)
 
-        for i, tello in enumerate(self.tellos):
+        for i, tello in enumerate(self.connected_tellos):
             self.communication.add_udp_control_handler(tello.address[0], tello.udp_control_receiver)
             self.communication.add_udp_state_handler(tello.address[0], tello.udp_state_receiver)
             if self.forward_video_stream:
                 self.communication.add_udp_video_stream_handler(self.iface_ip, tello.vs_port)
             tello.set_send_command_fn(self.communication.send_command)
 
-        self.barrier = Barrier(len(tellos))
-        self.funcBarrier = Barrier(len(tellos) + 1)
-        self.funcQueues = [Queue() for tello in tellos]
+        self.barrier: Barrier = Barrier(len(tellos))
+        self.funcBarrier: Barrier = Barrier(len(tellos) + 1)
+        self.funcQueues: List[Queue] = [Queue() for tello in tellos]
 
         def worker(i):
             queue = self.funcQueues[i]
-            tello = self.tellos[i]
+            tello = self.connected_tellos[i]
 
             while True:
                 func = queue.get()
@@ -113,6 +109,33 @@ class TelloSwarm:
     def start(self) -> None:
         """Start the communication threads."""
         self.communication.start()
+        self.reachable_tellos_thread.start()
+        self.try_tellos_reconnect_thread.start()
+
+    def _check_reachable_tellos(self) -> None:
+        while True:
+            try:
+                for tello in self.connected_tellos:
+                    if tello.is_unreachable():
+                        self.connected_tellos.remove(tello)
+                        self.unreachable_tellos.append(tello)
+                        TelloLogger.warning(f"Tello {tello.tello_id} is unreachable, removing from active list.")
+            except Exception as e:
+                TelloLogger.error(e)
+
+            time.sleep(Tello.RESPONSE_TIMEOUT)
+
+    def _try_tello_reconnect(self,) -> None:
+        while True:
+            try:
+                for tello in self.unreachable_tellos:
+                    tello.connect()
+                    self.connected_tellos.append(tello)
+                    TelloLogger.info(f"Tello {tello.tello_id} reconnected.")
+            except Exception as e:
+                TelloLogger.error(e)
+
+            time.sleep(Tello.RESPONSE_TIMEOUT)
 
     def sequential(self, func: Callable[[int, Tello], None]) -> None:
         """Call `func` for each tello sequentially. The function retrieves
@@ -124,7 +147,7 @@ class TelloSwarm:
         ```
         """
 
-        for i, tello in enumerate(self.tellos):
+        for i, tello in enumerate(self.connected_tellos):
             func(i, tello)
 
     def parallel(self, func: Callable[[int, Tello], None]) -> None:
@@ -168,7 +191,7 @@ class TelloSwarm:
         """Get a tello by its IP address."""
 
         tello_found = None
-        for tello in self.tellos:
+        for tello in self.connected_tellos:
             if tello.address[0] == ip:
                 tello_found = tello
                 break
@@ -215,7 +238,7 @@ class TelloSwarm:
             print(tello.get_battery())
         ```
         """
-        return iter(self.tellos)
+        return iter(self.connected_tellos)
 
     def __len__(self) -> int:
         """Return the amount of tellos in the swarm
@@ -224,4 +247,4 @@ class TelloSwarm:
         print("Tello count: {}".format(len(swarm)))
         ```
         """
-        return len(self.tellos)
+        return len(self.connected_tellos)

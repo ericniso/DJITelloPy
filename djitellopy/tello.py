@@ -78,6 +78,7 @@ class Tello:
 
         self.send_command_fn = None
         self.stream_on: bool = False
+        self.last_state_update: float = time.time()
         self.last_received_command_timestamp: float = time.time()
         self.last_rc_control_timestamp: float = time.time()
         self.responses_state_dict: Dict[str, Union[List, Dict]] = {'responses': [], 'state': {}}
@@ -121,6 +122,7 @@ class Tello:
         if address == self.address[0]:
             data = data.decode('ASCII')
             self.get_own_udp_object()['state'] = self.parse_state(data)
+            self.last_state_update = time.time()
 
     def parse_state(self, state: str) -> Dict[str, Union[int, float, str]]:
         """Parse a state line to a dictionary
@@ -153,6 +155,11 @@ class Tello:
             state_dict[key] = value
 
         return state_dict
+    
+    def is_unreachable(self) -> bool:
+        """Check if the Tello is unreachable.
+        """
+        return (time.time() - self.last_state_update) > self.RESPONSE_TIMEOUT
 
     def get_current_state(self) -> Dict:
         """Call this function to attain the state of the Tello. Returns a dict
@@ -431,7 +438,8 @@ class Tello:
         Internal method, you normally wouldn't call this yourself.
         """
         tries = 1 + self.retry_count
-        raise TelloException("Command '{}' was unsuccessful for {} tries. Latest response:\t'{}'".format(command, tries, response))
+        TelloLogger.error("Command '{}' was unsuccessful for {} tries. Latest response:\t'{}'".format(command, tries, response))
+        # raise TelloException("Command '{}' was unsuccessful for {} tries. Latest response:\t'{}'".format(command, tries, response))
 
     def connect(self, wait_for_state=True) -> None:
         """Enter SDK mode. Call this before any of the control functions.
@@ -448,7 +456,8 @@ class Tello:
                 time.sleep(1 / REPS)
 
             if not self.get_current_state():
-                raise TelloException('Did not receive a state packet from the Tello')
+                TelloLogger.error('Did not receive a state packet from the Tello')
+                # raise TelloException('Did not receive a state packet from the Tello')
 
     def send_keepalive(self) -> None:
         """Send a keepalive packet to prevent the drone from landing after 15s
