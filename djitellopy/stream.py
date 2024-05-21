@@ -195,4 +195,4 @@ class TelloSwarmStream:
         ```
         """
 
-        return [(stream.id, stream.get_frame_read()) for stream in self.streams]
+        return [(stream.tello_id, stream.get_frame_read()) for stream in self.streams]
