@@ -3,8 +3,8 @@ import numpy as np
 import json
 from collections import deque
 from threading import Thread, Lock
-from typing import List
-from .logger import TELLO_LOGGER
+from typing import List, Union
+from .logger import TelloLogger
 
 class TelloException(Exception):
     pass
@@ -16,7 +16,7 @@ class BackgroundFrameRead:
     backgroundFrameRead.frame to get the current frame.
     """
 
-    def __init__(self, address, with_queue = False, maxsize = 32):
+    def __init__(self, address, with_queue = False, maxsize = 32) -> None:
         self.address = address
         self.lock = Lock()
         self.frame = np.zeros([300, 400, 3], dtype=np.uint8)
@@ -27,7 +27,7 @@ class BackgroundFrameRead:
         # According to issue #90 the decoder might need some time
         # https://github.com/damiafuentes/DJITelloPy/issues/90#issuecomment-855458905
         try:
-            TELLO_LOGGER.debug('trying to grab video frames...')
+            TelloLogger.debug('trying to grab video frames...')
             self.container = av.open(self.address, timeout=(TelloStream.FRAME_GRAB_TIMEOUT, None))
         except av.error.ExitError:
             raise TelloException('Failed to grab video frames from video stream')
@@ -35,13 +35,13 @@ class BackgroundFrameRead:
         self.stopped = False
         self.worker = Thread(target=self.update_frame, args=(), daemon=True)
 
-    def start(self):
+    def start(self) -> None:
         """Start the frame update worker
         Internal method, you normally wouldn't call this yourself.
         """
         self.worker.start()
 
-    def update_frame(self):
+    def update_frame(self) -> None:
         """Thread worker function to retrieve frames using PyAV
         Internal method, you normally wouldn't call this yourself.
         """
@@ -80,11 +80,11 @@ class BackgroundFrameRead:
             return self._frame
 
     @frame.setter
-    def frame(self, value):
+    def frame(self, value) -> None:
         with self.lock:
             self._frame = value
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the frame update worker
         Internal method, you normally wouldn't call this yourself.
         """
@@ -93,38 +93,27 @@ class BackgroundFrameRead:
 
 class TelloStream:
     
-    TELLO_IP = '192.168.10.1'
-
-    VS_UDP_IP = '0.0.0.0'
-    DEFAULT_VS_UDP_PORT = 11111
-    VS_UDP_PORT = DEFAULT_VS_UDP_PORT
+    TELLO_MULTICAST_IP = '239.239.239.239'
+    DEFAULT_VS_MULTICAST_UDP_PORT = 30000
+    VS_MULTICAST_UDP_PORT = DEFAULT_VS_MULTICAST_UDP_PORT
 
     FRAME_GRAB_TIMEOUT = 5
 
-    def __init__(self,
-                 id,
-                 host=TELLO_IP,
-                 vs_port=VS_UDP_PORT,
-                 if_ip=None) -> None:
+    def __init__(self, tello_id: str, host: str = TELLO_MULTICAST_IP, vs_port: int = VS_MULTICAST_UDP_PORT, if_ip: Union[str, None] = None) -> None:
         
-        self.id = id
-        self.host = host
-        self.vs_host = self.VS_UDP_IP
-        self.vs_port = vs_port
-        self.if_ip = if_ip
-        self.background_frame_read = None
+        self.tello_id: str = tello_id
+        self.host: str = host
+        self.vs_port: int = vs_port
+        self.if_ip: Union[str, None] = if_ip
+        self.background_frame_read: BackgroundFrameRead = None
 
     def get_udp_video_address(self) -> str:
         """Internal method, you normally wouldn't call this youself.
         """
-        if self.if_ip is None:
-            address_schema = 'udp://@{ip}:{port}'
-            return address_schema.format(ip=self.vs_host, port=self.vs_port)
-
         address_schema = 'udp://@{ip}:{port}?localaddr={if_ip}'
         return address_schema.format(ip=self.host, port=self.vs_port, if_ip=self.if_ip)
     
-    def get_frame_read(self, with_queue = False, max_queue_len = 32) -> 'BackgroundFrameRead':
+    def get_frame_read(self, with_queue = False, max_queue_len = 32) -> BackgroundFrameRead:
         """Get the BackgroundFrameRead object from the camera drone. Then, you just need to call
         backgroundFrameRead.frame to get the actual frame received by the drone.
         Returns:
@@ -136,7 +125,7 @@ class TelloStream:
             self.background_frame_read.start()
         return self.background_frame_read
     
-    def end(self):
+    def end(self) -> None:
         if self.background_frame_read is not None:
             self.background_frame_read.stop()
 
@@ -165,7 +154,7 @@ class TelloSwarmStream:
         with open(path, 'r', encoding='utf-8') as fd:
             definition = json.load(fd)
 
-        return TelloSwarmStream.fromJsonList(definition)
+        return TelloSwarmStream.fromJsonList(definition, if_ip)
 
     @staticmethod
     def fromJsonList(definition: list, if_ip: str):
@@ -188,7 +177,7 @@ class TelloSwarmStream:
 
         tellos = []
         for d in definition:
-            tellos.append(TelloStream(id=d['id'], host=d['ip'], vs_port=d['vs_port'], if_ip=if_ip))
+            tellos.append(TelloStream(tello_id=d['id'], host=d['ip'], vs_port=d['vs_port'], if_ip=if_ip))
 
         return TelloSwarmStream(tellos)
     
@@ -206,4 +195,4 @@ class TelloSwarmStream:
         ```
         """
 
-        return [(stream.id, stream.get_frame_read()) for stream in self.streams]
+        return [(stream.tello_id, stream.get_frame_read()) for stream in self.streams]
