@@ -99,19 +99,19 @@ class TelloStream:
 
     FRAME_GRAB_TIMEOUT = 5
 
-    def __init__(self, tello_id: str, host: str = TELLO_MULTICAST_IP, vs_port: int = VS_MULTICAST_UDP_PORT, if_ip: Union[str, None] = None) -> None:
+    def __init__(self, tello_id: str, host: str = TELLO_MULTICAST_IP, vs_port: int = VS_MULTICAST_UDP_PORT, iface_ip: Union[str, None] = None) -> None:
         
         self.tello_id: str = tello_id
         self.host: str = host
         self.vs_port: int = vs_port
-        self.if_ip: Union[str, None] = if_ip
+        self.iface_ip: Union[str, None] = iface_ip
         self.background_frame_read: BackgroundFrameRead = None
 
     def get_udp_video_address(self) -> str:
         """Internal method, you normally wouldn't call this youself.
         """
-        address_schema = 'udp://@{ip}:{port}?localaddr={if_ip}'
-        return address_schema.format(ip=self.host, port=self.vs_port, if_ip=self.if_ip)
+        address_schema = 'udp://@{ip}:{port}?localaddr={iface_ip}'
+        return address_schema.format(ip=self.host, port=self.vs_port, iface_ip=self.iface_ip)
     
     def get_frame_read(self, with_queue = False, max_queue_len = 32) -> BackgroundFrameRead:
         """Get the BackgroundFrameRead object from the camera drone. Then, you just need to call
@@ -133,7 +133,7 @@ class TelloStream:
 class TelloSwarmStream:
 
     @staticmethod
-    def fromJsonFile(path: str, if_ip: str):
+    def fromJsonFile(path: str, iface_ip: str):
         """Create TelloSwarm from a json file. The file should contain a list of IP addresses.
 
         The json structure should look like this:
@@ -154,10 +154,10 @@ class TelloSwarmStream:
         with open(path, 'r', encoding='utf-8') as fd:
             definition = json.load(fd)
 
-        return TelloSwarmStream.fromJsonList(definition, if_ip)
+        return TelloSwarmStream.fromJsonList(definition, iface_ip)
 
     @staticmethod
-    def fromJsonList(definition: list, if_ip: str):
+    def fromJsonList(definition: list, iface_ip: str):
         """Create TelloSwarm from a json object.
 
         The json structure should look like this:
@@ -177,7 +177,7 @@ class TelloSwarmStream:
 
         tellos = []
         for d in definition:
-            tellos.append(TelloStream(tello_id=d['id'], host=d['ip'], vs_port=d['vs_port'], if_ip=if_ip))
+            tellos.append(TelloStream(tello_id=d['id'], host=d['ip'], vs_port=d['vs_port'], iface_ip=iface_ip))
 
         return TelloSwarmStream(tellos)
     

@@ -5,7 +5,7 @@ import json
 
 from threading import Thread, Barrier
 from queue import Queue
-from typing import List, Callable, Union
+from typing import List, Callable, Union, Dict
 
 from .logger import TelloLogger
 from .communication import TelloCommunication
@@ -23,7 +23,7 @@ class TelloSwarm:
     threads: List[Thread]
 
     @staticmethod
-    def fromJsonFile(path: str, if_ip: str, forward_video_stream: bool = False) -> 'TelloSwarm':
+    def fromJsonFile(path: str, iface_ip: str, forward_video_stream: bool = False) -> 'TelloSwarm':
         """Create TelloSwarm from a json file. The file should contain a list of IP addresses.
 
         The json structure should look like this:
@@ -44,10 +44,10 @@ class TelloSwarm:
         with open(path, 'r', encoding='utf-8') as fd:
             definition = json.load(fd)
 
-        return TelloSwarm.fromJsonList(definition, if_ip, forward_video_stream)
+        return TelloSwarm.fromJsonList(definition, iface_ip, forward_video_stream)
 
     @staticmethod
-    def fromJsonList(definition: list, if_ip: str, forward_video_stream: bool = False) -> 'TelloSwarm':
+    def fromJsonList(definition: list, iface_ip: str, forward_video_stream: bool = False) -> 'TelloSwarm':
         """Create TelloSwarm from a json object.
 
         The json structure should look like this:
@@ -69,24 +69,25 @@ class TelloSwarm:
         for d in definition:
             tellos.append(Tello(tello_id=d['id'], host=d['ip'], vs_port=d['vs_port']))
 
-        return TelloSwarm(tellos, if_ip, forward_video_stream)
+        return TelloSwarm(definition, tellos, iface_ip, forward_video_stream)
 
-    def __init__(self, tellos: List[Tello], if_ip: str, forward_video_stream: bool = False) -> None:
+    def __init__(self, definition: List[Dict], tellos: List[Tello], iface_ip: str, forward_video_stream: bool = False) -> None:
         """Initialize a TelloSwarm instance
 
         Arguments:
             tellos: list of [Tello] instances
         """
-        self.tellos = tellos
-        self.if_ip = if_ip
-        self.forward_video_stream = forward_video_stream
-        self.communication = TelloCommunication(self.forward_video_stream)
+        self.definition: List[Dict] = definition
+        self.tellos: List[Tello] = tellos
+        self.iface_ip: str = iface_ip
+        self.forward_video_stream: bool = forward_video_stream
+        self.communication: TelloCommunication = TelloCommunication(self.forward_video_stream)
 
         for i, tello in enumerate(self.tellos):
             self.communication.add_udp_control_handler(tello.address[0], tello.udp_control_receiver)
             self.communication.add_udp_state_handler(tello.address[0], tello.udp_state_receiver)
             if self.forward_video_stream:
-                self.communication.add_udp_video_stream_handler(self.if_ip, tello.vs_port)
+                self.communication.add_udp_video_stream_handler(self.iface_ip, tello.vs_port)
             tello.set_send_command_fn(self.communication.send_command)
 
         self.barrier = Barrier(len(tellos))
