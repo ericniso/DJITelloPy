@@ -4,7 +4,7 @@ import json
 from collections import deque
 from threading import Thread, Lock
 from typing import List, Union
-from .logger import TELLO_LOGGER
+from .logger import TelloLogger
 
 class TelloException(Exception):
     pass
@@ -27,7 +27,7 @@ class BackgroundFrameRead:
         # According to issue #90 the decoder might need some time
         # https://github.com/damiafuentes/DJITelloPy/issues/90#issuecomment-855458905
         try:
-            TELLO_LOGGER.debug('trying to grab video frames...')
+            TelloLogger.debug('trying to grab video frames...')
             self.container = av.open(self.address, timeout=(TelloStream.FRAME_GRAB_TIMEOUT, None))
         except av.error.ExitError:
             raise TelloException('Failed to grab video frames from video stream')

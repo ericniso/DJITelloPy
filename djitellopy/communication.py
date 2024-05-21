@@ -1,6 +1,6 @@
 import socket
 from threading import Thread
-from .logger import TELLO_LOGGER
+from .logger import TelloLogger
 
 
 class TelloCommunication:
@@ -40,7 +40,7 @@ class TelloCommunication:
     def add_udp_video_stream_handler(self, if_ip: str, port: int) -> None:
 
         if not self.forward_video_stream:
-            TELLO_LOGGER.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
+            TelloLogger.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
             return
 
         current_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -61,7 +61,7 @@ class TelloCommunication:
     def add_video_stream_multicast_destination(self, local_port: int, destination_multicast_ip: str, destination_multicast_port: int) -> None:
 
         if not self.forward_video_stream:
-            TELLO_LOGGER.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
+            TelloLogger.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
             return
 
         if local_port not in self.video_stream_multicast_destination:
@@ -72,7 +72,7 @@ class TelloCommunication:
     def remove_video_stream_multicast_destination(self, local_port: int, destination_multicast_ip: str, destination_multicast_port: int) -> None:
 
         if not self.forward_video_stream:
-            TELLO_LOGGER.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
+            TelloLogger.warning("Video stream forwarding is disabled. Please enable it by setting forward_video_stream to True.")
             return
         
         if local_port not in self.video_stream_multicast_destination:
@@ -106,7 +106,7 @@ class TelloCommunication:
                 if address[0] in self.udp_control_handlers:
                     self.udp_control_handlers[address[0]](data, address)
             except Exception as e:
-                TELLO_LOGGER.error(e)
+                TelloLogger.error(e)
 
     def _receive_state_data(self) -> None:
         """Receive state data from the Tello."""
@@ -117,7 +117,7 @@ class TelloCommunication:
                 if address[0] in self.udp_state_handlers:
                     self.udp_state_handlers[address[0]](data, address)
             except Exception as e:
-                TELLO_LOGGER.error(e)
+                TelloLogger.error(e)
 
     def _receive_video_stream_data(self, port: int) -> None:
         """Receive video stream data from the Tello."""
@@ -132,4 +132,4 @@ class TelloCommunication:
                     for dest_ip, dest_port in self.video_stream_multicast_destination[port]:
                         multicast_socket.sendto(data, (dest_ip, dest_port))
             except Exception as e:
-                TELLO_LOGGER.error(e)
+                TelloLogger.error(e)

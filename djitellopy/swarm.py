@@ -7,7 +7,7 @@ from threading import Thread, Barrier
 from queue import Queue
 from typing import List, Callable, Union
 
-from .logger import TELLO_LOGGER
+from .logger import TelloLogger
 from .communication import TelloCommunication
 from .tello import Tello, TelloException
 
@@ -178,7 +178,7 @@ class TelloSwarm:
         """Add a multicast destination for the video stream."""
 
         if not self.forward_video_stream:
-            TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
+            TelloLogger.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
             return
 
         self.communication.add_video_stream_multicast_destination(local_port, destination_multicast_ip, destination_multicast_port)
@@ -187,7 +187,7 @@ class TelloSwarm:
         """Remove a destination for the video stream."""
 
         if not self.forward_video_stream:
-            TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
+            TelloLogger.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
             return
 
         self.communication.remove_video_stream_multicast_destination(local_port, destination_multicast_ip, destination_multicast_port)
