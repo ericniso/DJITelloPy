@@ -1,15 +1,17 @@
 """Library for controlling multiple DJI Ryze Tello drones.
 """
 
+import json
+
 from threading import Thread, Barrier
 from queue import Queue
 from typing import List, Callable
 
+from .logger import TELLO_LOGGER
+from .communication import TelloCommunication
 from .tello import Tello, TelloException
-from .enforce_types import enforce_types
 
 
-@enforce_types
 class TelloSwarm:
     """Swarm library for controlling multiple Tellos simultaneously
     """
@@ -21,40 +23,72 @@ class TelloSwarm:
     threads: List[Thread]
 
     @staticmethod
-    def fromFile(path: str):
-        """Create TelloSwarm from file. The file should contain one IP address per line.
+    def fromJsonFile(path: str, if_ip: str, forward_video_stream: bool = False):
+        """Create TelloSwarm from a json file. The file should contain a list of IP addresses.
+
+        The json structure should look like this:
+            
+            ```json
+            [
+                {
+                    "ip": "<IP_ADDRESS>",
+                    "vs_port": <VIDEO_STREAM_PORT>
+                }
+            ]
+            ```
 
         Arguments:
-            path: path to the file
+            path: path to the json file
         """
-        with open(path, 'r') as fd:
-            ips = fd.readlines()
 
-        return TelloSwarm.fromIps(ips)
+        with open(path, 'r', encoding='utf-8') as fd:
+            definition = json.load(fd)
+
+        return TelloSwarm.fromJsonList(definition, if_ip, forward_video_stream)
 
     @staticmethod
-    def fromIps(ips: list):
-        """Create TelloSwarm from a list of IP addresses.
+    def fromJsonList(definition: list, if_ip: str, forward_video_stream: bool = False):
+        """Create TelloSwarm from a json object.
+
+        The json structure should look like this:
+            
+            ```json
+            [
+                {
+                    "ip": "<IP_ADDRESS>",
+                    "vs_port": <VIDEO_STREAM_PORT>
+                }
+            ]
+            ```
 
         Arguments:
-            ips: list of IP Addresses
+            definition: json object dict
         """
-        if not ips:
-            raise TelloException("No ips provided")
 
         tellos = []
-        for ip in ips:
-            tellos.append(Tello(ip.strip()))
+        for d in definition:
+            tellos.append(Tello(id=d['id'], host=d['ip'], vs_port=d['vs_port']))
 
-        return TelloSwarm(tellos)
+        return TelloSwarm(tellos, if_ip, forward_video_stream)
 
-    def __init__(self, tellos: List[Tello]):
+    def __init__(self, tellos: List[Tello], if_ip: str, forward_video_stream: bool = False):
         """Initialize a TelloSwarm instance
 
         Arguments:
             tellos: list of [Tello][tello] instances
         """
         self.tellos = tellos
+        self.if_ip = if_ip
+        self.forward_video_stream = forward_video_stream
+        self.communication = TelloCommunication(self.forward_video_stream)
+
+        for i, tello in enumerate(self.tellos):
+            self.communication.add_udp_control_handler(tello.address[0], tello.udp_control_receiver)
+            self.communication.add_udp_state_handler(tello.address[0], tello.udp_state_receiver)
+            if self.forward_video_stream:
+                self.communication.add_udp_video_stream_handler(self.if_ip, tello.vs_port)
+            tello.set_send_command_fn(self.communication.send_command)
+
         self.barrier = Barrier(len(tellos))
         self.funcBarrier = Barrier(len(tellos) + 1)
         self.funcQueues = [Queue() for tello in tellos]
@@ -74,6 +108,10 @@ class TelloSwarm:
             thread = Thread(target=worker, daemon=True, args=(i,))
             thread.start()
             self.threads.append(thread)
+
+    def start(self):
+        """Start the communication threads."""
+        self.communication.start()
 
     def sequential(self, func: Callable[[int, Tello], None]):
         """Call `func` for each tello sequentially. The function retrieves
@@ -124,6 +162,53 @@ class TelloSwarm:
         ```
         """
         return self.barrier.wait(timeout)
+
+    def by_ip(self, ip: str):
+        """Get a tello by its IP address."""
+
+        tello_found = None
+        for tello in self.tellos:
+            if tello.address[0] == ip:
+                tello_found = tello
+                break
+        
+        return tello_found
+
+    def add_video_stream_host_destination(self, local_port: int, destination_ip: str, destination_port: int):
+        """Add a destination for the video stream."""
+
+        if not self.forward_video_stream:
+            TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
+            return
+
+        self.communication.add_video_stream_host_destination(local_port, destination_ip, destination_port)
+
+    def add_video_stream_multicast_destination(self, local_port: int, destination_multicast_ip: str, destination_multicast_port: int):
+        """Add a multicast destination for the video stream."""
+
+        if not self.forward_video_stream:
+            TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
+            return
+
+        self.communication.add_video_stream_multicast_destination(local_port, destination_multicast_ip, destination_multicast_port)
+
+    def remove_video_stream_host_destination(self, local_port: int, destination_ip: str, destination_port: int):
+        """Remove a destination for the video stream."""
+
+        if not self.forward_video_stream:
+            TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
+            return
+
+        self.communication.remove_video_stream_host_destination(local_port, destination_ip, destination_port)
+
+    def remove_video_stream_multicast_destination(self, local_port: int, destination_multicast_ip: str, destination_multicast_port: int):
+        """Remove a destination for the video stream."""
+
+        if not self.forward_video_stream:
+            TELLO_LOGGER.warning("Video stream forwarding is disabled. Enable it with `forward_video_stream=True`.")
+            return
+
+        self.communication.remove_video_stream_multicast_destination(local_port, destination_multicast_ip, destination_multicast_port)
 
     def __getattr__(self, attr):
         """Call a standard tello function in parallel on all tellos.
