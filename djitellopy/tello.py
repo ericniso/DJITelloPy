@@ -2,19 +2,9 @@
 """
 
 # coding=utf-8
-import logging
-import socket
 import time
-from collections import deque
-from threading import Thread, Lock
-from typing import Optional, Union, Type, Dict
+from typing import Union, Type, Dict, Tuple, List, Any
 from .logger import TELLO_LOGGER
-
-import av
-import numpy as np
-
-
-drones: Optional[dict] = {}
 
 
 class TelloException(Exception):
@@ -79,70 +69,60 @@ class Tello:
     stream_on = False
     is_flying = False
 
-    def __init__(self,
-                 id,
-                 host=TELLO_IP,
-                 retry_count=RETRY_COUNT,
-                 vs_port=VS_PORT):
+    def __init__(self, tello_id: str, host: str = TELLO_IP, vs_port: int = VS_PORT, retry_count: int = RETRY_COUNT) -> None:
 
-        global drones
+        self.tello_id: str = tello_id
+        self.address: Tuple[str, int] = (host, Tello.CONTROL_UDP_PORT)
+        self.vs_port = vs_port
+        self.retry_count: int = retry_count
 
-        self.id = id
-        self.address = (host, Tello.CONTROL_UDP_PORT)
         self.send_command_fn = None
-        self.stream_on = False
-        self.retry_count = retry_count
-        self.last_received_command_timestamp = time.time()
-        self.last_rc_control_timestamp = time.time()
-
-        drones[host] = {'responses': [], 'state': {}}
+        self.stream_on: bool = False
+        self.last_received_command_timestamp: float = time.time()
+        self.last_rc_control_timestamp: float = time.time()
+        self.responses_state_dict: Dict[str, Union[List, Dict]] = {'responses': [], 'state': {}}
 
         TELLO_LOGGER.info("Tello instance was initialized. Host: '{}'. Port: '{}'.".format(host, Tello.CONTROL_UDP_PORT))
 
-        self.vs_port = vs_port
-
-    def set_send_command_fn(self, fn):
+    def set_send_command_fn(self, fn) -> None:
         """Set the function to use for sending commands to the Tello.
         """
         self.send_command_fn = fn
 
-    def change_vs_udp(self, udp_port):
+    def change_vs_udp(self, udp_port) -> None:
         """Change the UDP Port for sending video feed from the drone.
         """
         self.vs_port = udp_port
         self.send_control_command(f'port 8890 {self.vs_port}')
 
-    def get_own_udp_object(self):
-        """Get own object from the global drones dict. This object is filled
+    def get_own_udp_object(self) -> Dict[str, Union[List, Dict]]:
+        """This object is filled
         with responses and state information by the receiver threads.
         Internal method, you normally wouldn't call this yourself.
         """
-        global drones
 
-        host = self.address[0]
-        return drones[host]
+        return self.responses_state_dict
 
-    def udp_control_receiver(self, data, address):
+    def udp_control_receiver(self, data, address) -> None:
         """Setup UDP receiver. This method listens for control packets from Tello."""
         
         address = address[0]
         TELLO_LOGGER.debug('Data received from {} at client_socket'.format(address))
 
-        if address in drones:
-            drones[address]['responses'].append(data)
+        if address == self.address[0]:
+            self.get_own_udp_object()['responses'].append(data)
 
-    def udp_state_receiver(self, data, address):
+    def udp_state_receiver(self, data, address) -> None:
         """Setup UDP receiver. This method listens for state packets from Tello."""
 
         address = address[0]
         TELLO_LOGGER.debug('Data received from {} at state_socket'.format(address))
 
-        if address in drones:
+        if address == self.address[0]:
             data = data.decode('ASCII')
-            drones[address]['state'] = Tello.parse_state(data)
+            self.get_own_udp_object()['state'] = self.parse_state(data)
 
-    @staticmethod
-    def parse_state(state: str) -> Dict[str, Union[int, float, str]]:
+    def parse_state(self, state: str) -> Dict[str, Union[int, float, str]]:
         """Parse a state line to a dictionary
         Internal method, you normally wouldn't call this yourself.
         """
@@ -166,8 +146,7 @@ class Tello:
                 try:
                     value = num_type(value)
                 except ValueError as e:
-                    TELLO_LOGGER.debug('Error parsing state value for {}: {} to {}'
-                                       .format(key, value, num_type))
+                    TELLO_LOGGER.debug('Error parsing state value for {}: {} to {}'.format(key, value, num_type))
                     TELLO_LOGGER.error(e)
                     continue
 
@@ -175,14 +154,14 @@ class Tello:
 
         return state_dict
 
-    def get_current_state(self) -> dict:
+    def get_current_state(self) -> Dict:
         """Call this function to attain the state of the Tello. Returns a dict
         with all fields.
         Internal method, you normally wouldn't call this yourself.
         """
         return self.get_own_udp_object()['state']
 
-    def get_state_field(self, key: str):
+    def get_state_field(self, key: str) -> Any:
         """Get a specific sate field by name.
         Internal method, you normally wouldn't call this yourself.
         """
@@ -388,7 +367,7 @@ class Tello:
         TELLO_LOGGER.info("Response {}: '{}'".format(command, response))
         return response
 
-    def send_command_without_return(self, command: str):
+    def send_command_without_return(self, command: str) -> None:
         """Send command to Tello without expecting a response.
         Internal method, you normally wouldn't call this yourself.
         """
@@ -452,10 +431,9 @@ class Tello:
         Internal method, you normally wouldn't call this yourself.
         """
         tries = 1 + self.retry_count
-        raise TelloException("Command '{}' was unsuccessful for {} tries. Latest response:\t'{}'"
-                             .format(command, tries, response))
+        raise TelloException("Command '{}' was unsuccessful for {} tries. Latest response:\t'{}'".format(command, tries, response))
 
-    def connect(self, wait_for_state=True):
+    def connect(self, wait_for_state=True) -> None:
         """Enter SDK mode. Call this before any of the control functions.
         """
         self.send_control_command("command")
@@ -472,28 +450,28 @@ class Tello:
             if not self.get_current_state():
                 raise TelloException('Did not receive a state packet from the Tello')
 
-    def send_keepalive(self):
+    def send_keepalive(self) -> None:
         """Send a keepalive packet to prevent the drone from landing after 15s
         """
         self.send_control_command("keepalive")
 
-    def turn_motor_on(self):
+    def turn_motor_on(self) -> None:
         """Turn on motors without flying (mainly for cooling)
         """
         self.send_control_command("motoron")
 
-    def turn_motor_off(self):
+    def turn_motor_off(self) -> None:
         """Turns off the motor cooling mode
         """
         self.send_control_command("motoroff")
 
-    def initiate_throw_takeoff(self):
+    def initiate_throw_takeoff(self) -> None:
         """Allows you to take off by throwing your drone within 5 seconds of this command
         """
         self.send_control_command("throwfly")
         self.is_flying = True
 
-    def takeoff(self):
+    def takeoff(self) -> None:
         """Automatic takeoff.
         """
         # Something it takes a looooot of time to take off and return a succesful takeoff.
@@ -501,13 +479,13 @@ class Tello:
         self.send_control_command("takeoff", timeout=Tello.TAKEOFF_TIMEOUT)
         self.is_flying = True
 
-    def land(self):
+    def land(self) -> None:
         """Automatic landing.
         """
         self.send_control_command("land")
         self.is_flying = False
 
-    def streamon(self):
+    def streamon(self) -> None:
         """Turn on video streaming. Use `tello.get_frame_read` afterwards.
         Video Streaming is supported on all tellos when in AP mode (i.e.
         when your computer is connected to Tello-XXXXXX WiFi ntwork).
@@ -523,19 +501,19 @@ class Tello:
         self.send_control_command("streamon")
         self.stream_on = True
 
-    def streamoff(self):
+    def streamoff(self) -> None:
         """Turn off video streaming.
         """
         self.send_control_command("streamoff")
         self.stream_on = False
 
-    def emergency(self):
+    def emergency(self) -> None:
         """Stop all motors immediately.
         """
         self.send_command_without_return("emergency")
         self.is_flying = False
 
-    def move(self, direction: str, x: int):
+    def move(self, direction: str, x: int) -> None:
         """Tello fly up, down, left, right, forward or back with distance x cm.
         Users would normally call one of the move_x functions instead.
         Arguments:
@@ -544,63 +522,63 @@ class Tello:
         """
         self.send_control_command("{} {}".format(direction, x))
 
-    def move_up(self, x: int):
+    def move_up(self, x: int) -> None:
         """Fly x cm up.
         Arguments:
             x: 20-500
         """
         self.move("up", x)
 
-    def move_down(self, x: int):
+    def move_down(self, x: int) -> None:
         """Fly x cm down.
         Arguments:
             x: 20-500
         """
         self.move("down", x)
 
-    def move_left(self, x: int):
+    def move_left(self, x: int) -> None:
         """Fly x cm left.
         Arguments:
             x: 20-500
         """
         self.move("left", x)
 
-    def move_right(self, x: int):
+    def move_right(self, x: int) -> None:
         """Fly x cm right.
         Arguments:
             x: 20-500
         """
         self.move("right", x)
 
-    def move_forward(self, x: int):
+    def move_forward(self, x: int) -> None:
         """Fly x cm forward.
         Arguments:
             x: 20-500
         """
         self.move("forward", x)
 
-    def move_back(self, x: int):
+    def move_back(self, x: int) -> None:
         """Fly x cm backwards.
         Arguments:
             x: 20-500
         """
         self.move("back", x)
 
-    def rotate_clockwise(self, x: int):
+    def rotate_clockwise(self, x: int) -> None:
         """Rotate x degree clockwise.
         Arguments:
             x: 1-360
         """
         self.send_control_command("cw {}".format(x))
 
-    def rotate_counter_clockwise(self, x: int):
+    def rotate_counter_clockwise(self, x: int) -> None:
         """Rotate x degree counter-clockwise.
         Arguments:
             x: 1-3600
         """
         self.send_control_command("ccw {}".format(x))
 
-    def flip(self, direction: str):
+    def flip(self, direction: str) -> None:
         """Do a flip maneuver.
         Users would normally call one of the flip_x functions instead.
         Arguments:
@@ -608,27 +586,27 @@ class Tello:
         """
         self.send_control_command("flip {}".format(direction))
 
-    def flip_left(self):
+    def flip_left(self) -> None:
         """Flip to the left.
         """
         self.flip("l")
 
-    def flip_right(self):
+    def flip_right(self) -> None:
         """Flip to the right.
         """
         self.flip("r")
 
-    def flip_forward(self):
+    def flip_forward(self) -> None:
         """Flip forward.
         """
         self.flip("f")
 
-    def flip_back(self):
+    def flip_back(self) -> None:
         """Flip backwards.
         """
         self.flip("b")
 
-    def go_xyz_speed(self, x: int, y: int, z: int, speed: int):
+    def go_xyz_speed(self, x: int, y: int, z: int, speed: int) -> None:
         """Fly to x y z relative to the current position.
         Speed defines the traveling speed in cm/s.
         Arguments:
@@ -640,7 +618,7 @@ class Tello:
         cmd = 'go {} {} {} {}'.format(x, y, z, speed)
         self.send_control_command(cmd)
 
-    def curve_xyz_speed(self, x1: int, y1: int, z1: int, x2: int, y2: int, z2: int, speed: int):
+    def curve_xyz_speed(self, x1: int, y1: int, z1: int, x2: int, y2: int, z2: int, speed: int) -> None:
         """Fly to x2 y2 z2 in a curve via x1 y1 z1. Speed defines the traveling speed in cm/s.
 
         - Both points are relative to the current position
@@ -660,7 +638,7 @@ class Tello:
         cmd = 'curve {} {} {} {} {} {} {}'.format(x1, y1, z1, x2, y2, z2, speed)
         self.send_control_command(cmd)
 
-    def go_xyz_speed_mid(self, x: int, y: int, z: int, speed: int, mid: int):
+    def go_xyz_speed_mid(self, x: int, y: int, z: int, speed: int, mid: int) -> None:
         """Fly to x y z relative to the mission pad with id mid.
         Speed defines the traveling speed in cm/s.
         Arguments:
@@ -673,7 +651,7 @@ class Tello:
         cmd = 'go {} {} {} {} m{}'.format(x, y, z, speed, mid)
         self.send_control_command(cmd)
 
-    def curve_xyz_speed_mid(self, x1: int, y1: int, z1: int, x2: int, y2: int, z2: int, speed: int, mid: int):
+    def curve_xyz_speed_mid(self, x1: int, y1: int, z1: int, x2: int, y2: int, z2: int, speed: int, mid: int) -> None:
         """Fly to x2 y2 z2 in a curve via x1 y1 z1. Speed defines the traveling speed in cm/s.
 
         - Both points are relative to the mission pad with id mid.
@@ -694,7 +672,7 @@ class Tello:
         cmd = 'curve {} {} {} {} {} {} {} m{}'.format(x1, y1, z1, x2, y2, z2, speed, mid)
         self.send_control_command(cmd)
 
-    def go_xyz_speed_yaw_mid(self, x: int, y: int, z: int, speed: int, yaw: int, mid1: int, mid2: int):
+    def go_xyz_speed_yaw_mid(self, x: int, y: int, z: int, speed: int, yaw: int, mid1: int, mid2: int) -> None:
         """Fly to x y z relative to mid1.
         Then fly to 0 0 z over mid2 and rotate to yaw relative to mid2's rotation.
         Speed defines the traveling speed in cm/s.
@@ -710,17 +688,17 @@ class Tello:
         cmd = 'jump {} {} {} {} {} m{} m{}'.format(x, y, z, speed, yaw, mid1, mid2)
         self.send_control_command(cmd)
 
-    def enable_mission_pads(self):
+    def enable_mission_pads(self) -> None:
         """Enable mission pad detection
         """
         self.send_control_command("mon")
 
-    def disable_mission_pads(self):
+    def disable_mission_pads(self) -> None:
         """Disable mission pad detection
         """
         self.send_control_command("moff")
 
-    def set_mission_pad_detection_direction(self, x):
+    def set_mission_pad_detection_direction(self, x) -> None:
         """Set mission pad detection direction. enable_mission_pads needs to be
         called first. When detecting both directions detecting frequency is 10Hz,
         otherwise the detection frequency is 20Hz.
@@ -729,15 +707,14 @@ class Tello:
         """
         self.send_control_command("mdirection {}".format(x))
 
-    def set_speed(self, x: int):
+    def set_speed(self, x: int) -> None:
         """Set speed to x cm/s.
         Arguments:
             x: 10-100
         """
         self.send_control_command("speed {}".format(x))
 
-    def send_rc_control(self, left_right_velocity: int, forward_backward_velocity: int, up_down_velocity: int,
-                        yaw_velocity: int):
+    def send_rc_control(self, left_right_velocity: int, forward_backward_velocity: int, up_down_velocity: int, yaw_velocity: int) -> None:
         """Send RC control via four channels. Command is sent every self.TIME_BTW_RC_CONTROL_COMMANDS seconds.
         Arguments:
             left_right_velocity: -100~100 (left/right)
@@ -758,13 +735,13 @@ class Tello:
             )
             self.send_command_without_return(cmd)
 
-    def set_wifi_credentials(self, ssid: str, password: str):
+    def set_wifi_credentials(self, ssid: str, password: str) -> None:
         """Set the Wi-Fi SSID and password. The Tello will reboot afterwords.
         """
         cmd = 'wifi {} {}'.format(ssid, password)
         self.send_control_command(cmd)
 
-    def connect_to_wifi(self, ssid: str, password: str):
+    def connect_to_wifi(self, ssid: str, password: str) -> None:
         """Connects to the Wi-Fi with SSID and password.
         After this command the tello will reboot.
         Only works with Tello EDUs.
@@ -772,7 +749,7 @@ class Tello:
         cmd = 'ap {} {}'.format(ssid, password)
         self.send_control_command(cmd)
 
-    def set_network_ports(self, state_packet_port: int, video_stream_port: int):
+    def set_network_ports(self, state_packet_port: int, video_stream_port: int) -> None:
         """Sets the ports for state packets and video streaming
         While you can use this command to reconfigure the Tello this library currently does not support
         non-default ports (TODO!)
@@ -780,12 +757,12 @@ class Tello:
         cmd = 'port {} {}'.format(state_packet_port, video_stream_port)
         self.send_control_command(cmd)
 
-    def reboot(self):
+    def reboot(self) -> None:
         """Reboots the drone
         """
         self.send_command_without_return('reboot')
 
-    def set_video_bitrate(self, bitrate: int):
+    def set_video_bitrate(self, bitrate: int) -> None:
         """Sets the bitrate of the video stream
         Use one of the following for the bitrate argument:
             Tello.BITRATE_AUTO
@@ -798,7 +775,7 @@ class Tello:
         cmd = 'setbitrate {}'.format(bitrate)
         self.send_control_command(cmd)
 
-    def set_video_resolution(self, resolution: str):
+    def set_video_resolution(self, resolution: str) -> None:
         """Sets the resolution of the video stream
         Use one of the following for the resolution argument:
             Tello.RESOLUTION_480P
@@ -807,7 +784,7 @@ class Tello:
         cmd = 'setresolution {}'.format(resolution)
         self.send_control_command(cmd)
 
-    def set_video_fps(self, fps: str):
+    def set_video_fps(self, fps: str) -> None:
         """Sets the frames per second of the video stream
         Use one of the following for the fps argument:
             Tello.FPS_5
@@ -817,7 +794,7 @@ class Tello:
         cmd = 'setfps {}'.format(fps)
         self.send_control_command(cmd)
 
-    def set_video_direction(self, direction: int):
+    def set_video_direction(self, direction: int) -> None:
         """Selects one of the two cameras for video streaming
         The forward camera is the regular 1080x720 color camera
         The downward camera is a grey-only 320x240 IR-sensitive camera
@@ -828,7 +805,7 @@ class Tello:
         cmd = 'downvision {}'.format(direction)
         self.send_control_command(cmd)
 
-    def send_expansion_command(self, expansion_cmd: str):
+    def send_expansion_command(self, expansion_cmd: str) -> None:
         """Sends a command to the ESP32 expansion board connected to a Tello Talent
         Use e.g. tello.send_expansion_command("led 255 0 0") to turn the top led red.
         """
@@ -881,7 +858,7 @@ class Tello:
             {'pitch': int, 'roll': int, 'yaw': int}
         """
         response = self.send_read_command('attitude?')
-        return Tello.parse_state(response)
+        return self.parse_state(response)
 
     def query_barometer(self) -> int:
         """Get barometer value (cm)
@@ -930,7 +907,7 @@ class Tello:
         """
         return self.send_read_command('active?')
 
-    def end(self):
+    def end(self) -> None:
         """Call this method when you want to end the tello object
         """
         try:
@@ -940,10 +917,6 @@ class Tello:
                 self.streamoff()
         except TelloException:
             pass
-
-        host = self.address[0]
-        if host in drones:
-            del drones[host]
 
     def __del__(self):
         self.end()
