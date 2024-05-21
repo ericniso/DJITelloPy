@@ -130,8 +130,10 @@ class TelloSwarm:
             try:
                 for tello in self.unreachable_tellos:
                     tello.connect()
-                    self.connected_tellos.append(tello)
-                    TelloLogger.info(f"Tello {tello.tello_id} reconnected.")
+                    if not tello.is_unreachable():
+                        self.connected_tellos.append(tello)
+                        self.unreachable_tellos.remove(tello)
+                        TelloLogger.info(f"Tello {tello.tello_id} reconnected.")
             except Exception as e:
                 TelloLogger.error(e)
 
