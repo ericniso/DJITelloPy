@@ -938,5 +938,8 @@ class Tello:
         except TelloException:
             pass
 
+    def __str__(self) -> str:
+        return f"{{ id: {self.tello_id}, host: {self.address[0]}, vs_port: {self.vs_port}}}"
+
     def __del__(self):
         self.end()

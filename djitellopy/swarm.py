@@ -15,6 +15,9 @@ class TelloSwarm:
     """Swarm library for controlling multiple Tellos simultaneously
     """
 
+    CHECK_REACHABLE_TELLOS_INTERVAL: int = 2
+    TRY_RECONNECT_TELLOS_INTERVAL: int = 2
+
     @staticmethod
     def fromJsonFile(path: str, iface_ip: str, forward_video_stream: bool = False, tello_connected_handler: Callable[[Tello], None] = None) -> 'TelloSwarm':
         """Create TelloSwarm from a json file. The file should contain a list of IP addresses.
@@ -121,25 +124,28 @@ class TelloSwarm:
                     if tello.is_unreachable():
                         self.connected_tellos.remove(tello)
                         self.unreachable_tellos.append(tello)
-                        TelloLogger.warning(f"Tello {tello.tello_id} is unreachable, removing from active list.")
+                        TelloLogger.warning(f"Tello {str(tello)} is unreachable, removing from active list.")
             except Exception as e:
                 TelloLogger.error(e)
 
-            time.sleep(Tello.RESPONSE_TIMEOUT)
+            time.sleep(TelloSwarm.CHECK_REACHABLE_TELLOS_INTERVAL)
 
     def _try_tello_reconnect(self,) -> None:
         while True:
             try:
                 for tello in self.unreachable_tellos:
+                    TelloLogger.info(f"Trying to reconnect to Tello {str(tello)}...")
                     tello.connect()
                     if not tello.is_unreachable():
                         self.connected_tellos.append(tello)
                         self.unreachable_tellos.remove(tello)
-                        TelloLogger.info(f"Tello {tello.tello_id} connected.")
+                        TelloLogger.info(f"Tello {str(tello)} connected.")
+                    else:
+                        TelloLogger.warning(f"Reconnection to Tello {str(tello)} failed, retrying in {TelloSwarm.TRY_RECONNECT_TELLOS_INTERVAL} seconds")
             except Exception as e:
                 TelloLogger.error(e)
 
-            time.sleep(Tello.RESPONSE_TIMEOUT)
+            time.sleep(TelloSwarm.TRY_RECONNECT_TELLOS_INTERVAL)
 
     def sequential(self, func: Callable[[int, Tello], None]) -> None:
         """Call `func` for each tello sequentially. The function retrieves
