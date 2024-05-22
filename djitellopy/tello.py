@@ -165,7 +165,10 @@ class Tello:
     def is_unreachable(self) -> bool:
         """Check if the Tello is unreachable.
         """
-        return (time.time() - self.last_state_update) > self.RESPONSE_TIMEOUT
+        unreachable = (time.time() - self.last_state_update) > self.RESPONSE_TIMEOUT
+        if unreachable:
+            self.responses_state_dict['state'] = {}  # Clear state
+        return unreachable
 
     def get_current_state(self) -> Dict:
         """Call this function to attain the state of the Tello. Returns a dict
