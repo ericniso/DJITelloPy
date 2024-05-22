@@ -351,10 +351,10 @@ class Tello:
         # So wait at least self.TIME_BTW_COMMANDS seconds
         diff = time.time() - self.last_received_command_timestamp
         if diff < self.TIME_BTW_COMMANDS:
-            TelloLogger.debug(f'Waiting {diff} seconds to execute command: {command} to {str(self)}...')
+            TelloLogger.debug(f'{str(self)} | Waiting {diff} seconds to execute command: {command}...')
             time.sleep(diff)
 
-        TelloLogger.info(f"Send command: '{command}' to {str(self)}")
+        TelloLogger.info(f"{str(self)} | Send command: '{command}'")
         timestamp = time.time()
 
         self.send_command_fn(command, self.address)
@@ -363,7 +363,7 @@ class Tello:
 
         while not responses:
             if time.time() - timestamp > timeout:
-                message = f"Aborting command '{command}' to {str(self)}. Did not receive a response after {timeout} seconds"
+                message = f"{str(self)} | Aborting command '{command}'. Did not receive a response after {timeout} seconds"
                 TelloLogger.warning(message)
                 return message
             time.sleep(0.1)  # Sleep during send command
@@ -378,7 +378,7 @@ class Tello:
             return "response decode error"
         response = response.rstrip("\r\n")
 
-        TelloLogger.info(f"Response {command}: '{response}' from {str(self)}")
+        TelloLogger.info(f"{str(self)} | Response {command}: '{response}'")
         return response
 
     def send_command_without_return(self, command: str) -> None:
@@ -387,7 +387,7 @@ class Tello:
         """
         # Commands very consecutive makes the drone not respond to them. So wait at least self.TIME_BTW_COMMANDS seconds
 
-        TelloLogger.info(f"Send command (no response expected): '{command}' to {str(self)}")
+        TelloLogger.info(f"{str(self)} | Send command (no response expected): '{command}'")
         self.send_command_fn(command, self.address)
 
     def send_control_command(self, command: str, timeout: int = RESPONSE_TIMEOUT) -> bool:
@@ -401,7 +401,7 @@ class Tello:
             if 'ok' in response.lower():
                 return True
 
-            TelloLogger.debug(f"Command attempt #{i} failed for command: '{command}' to {str(self)}")
+            TelloLogger.debug(f"{str(self)} | Command attempt #{i} failed for command: '{command}'")
 
         self.raise_result_error(command, response)
         return False # never reached
@@ -445,7 +445,7 @@ class Tello:
         Internal method, you normally wouldn't call this yourself.
         """
         tries = 1 + self.retry_count
-        TelloLogger.error(f"Command '{command}' to {str(self)} was unsuccessful for {tries} tries. Latest response:\t'{response}'")
+        TelloLogger.error(f"{str(self)} | Command '{command}' was unsuccessful for {tries} tries. Latest response:\t'{response}'")
         # raise TelloException("Command '{}' was unsuccessful for {} tries. Latest response:\t'{}'".format(command, tries, response))
 
     def connect(self, wait_for_state=True) -> None:
@@ -458,7 +458,7 @@ class Tello:
             for i in range(REPS):
                 if self.get_current_state():
                     t = i / REPS  # in seconds
-                    TelloLogger.debug(f"Tello {str(self)} '.connect()' received first state packet after {t} seconds")
+                    TelloLogger.debug(f"{str(self)} | '.connect()' received first state packet after {t} seconds")
                     break
                 time.sleep(1 / REPS)
 
