@@ -3,7 +3,7 @@
 
 # coding=utf-8
 import time
-from typing import Union, Type, Dict, Tuple, List, Any
+from typing import Union, Type, Dict, Tuple, List, Any, Callable
 from .logger import TelloLogger
 
 
@@ -69,12 +69,13 @@ class Tello:
     stream_on = False
     is_flying = False
 
-    def __init__(self, tello_id: str, host: str = TELLO_IP, vs_port: int = VS_PORT, retry_count: int = RETRY_COUNT) -> None:
+    def __init__(self, tello_id: str, host: str = TELLO_IP, vs_port: int = VS_PORT, retry_count: int = RETRY_COUNT, tello_connected_handler: Callable[['Tello'], None] = None) -> None:
 
         self.tello_id: str = tello_id
         self.address: Tuple[str, int] = (host, Tello.CONTROL_UDP_PORT)
         self.vs_port = vs_port
         self.retry_count: int = retry_count
+        self.tello_connected_handler: Callable[['Tello'], None] = tello_connected_handler
 
         self.send_command_fn = None
         self.stream_on: bool = False
@@ -89,6 +90,11 @@ class Tello:
         """Set the function to use for sending commands to the Tello.
         """
         self.send_command_fn = fn
+
+    def set_tello_connected_handler(self, fn: Callable[['Tello'], None]) -> None:
+        """Set the function to call when the Tello is connected.
+        """
+        self.tello_connected_handler = fn
 
     def change_vs_udp(self, udp_port) -> None:
         """Change the UDP Port for sending video feed from the drone.
@@ -458,6 +464,8 @@ class Tello:
             if not self.get_current_state():
                 TelloLogger.error('Did not receive a state packet from the Tello')
                 # raise TelloException('Did not receive a state packet from the Tello')
+            else:
+                self.tello_connected_handler(self)
 
     def send_keepalive(self) -> None:
         """Send a keepalive packet to prevent the drone from landing after 15s

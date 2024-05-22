@@ -64,7 +64,7 @@ class TelloSwarm:
 
         return TelloSwarm(definition, tellos, iface_ip, forward_video_stream)
 
-    def __init__(self, definition: List[Dict], tellos: List[Tello], iface_ip: str, forward_video_stream: bool = False) -> None:
+    def __init__(self, definition: List[Dict], tellos: List[Tello], iface_ip: str, forward_video_stream: bool = False, tello_connected_handler: Callable[[Tello], None] = None) -> None:
         """Initialize a TelloSwarm instance
 
         Arguments:
@@ -75,11 +75,13 @@ class TelloSwarm:
         self.unreachable_tellos: List[Tello] = []
         self.iface_ip: str = iface_ip
         self.forward_video_stream: bool = forward_video_stream
+        self.tello_connected_handler: Callable[[Tello], None] = tello_connected_handler
         self.communication: TelloCommunication = TelloCommunication(self.forward_video_stream)
         self.reachable_tellos_thread = Thread(target=self._check_reachable_tellos, daemon=True)
         self.try_tellos_reconnect_thread = Thread(target=self._try_tello_reconnect, daemon=True)
 
         for i, tello in enumerate(self.connected_tellos):
+            tello.set_tello_connected_handler(self.tello_connected_handler)
             self.communication.add_udp_control_handler(tello.address[0], tello.udp_control_receiver)
             self.communication.add_udp_state_handler(tello.address[0], tello.udp_state_receiver)
             if self.forward_video_stream:
@@ -133,7 +135,7 @@ class TelloSwarm:
                     if not tello.is_unreachable():
                         self.connected_tellos.append(tello)
                         self.unreachable_tellos.remove(tello)
-                        TelloLogger.info(f"Tello {tello.tello_id} reconnected.")
+                        TelloLogger.info(f"Tello {tello.tello_id} connected.")
             except Exception as e:
                 TelloLogger.error(e)
 
