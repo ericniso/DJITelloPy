@@ -84,7 +84,7 @@ class Tello:
         self.last_rc_control_timestamp: float = time.time()
         self.responses_state_dict: Dict[str, Union[List, Dict]] = {'responses': [], 'state': {}}
 
-        TelloLogger.info("Tello instance was initialized. Host: '{}'. Port: '{}'.".format(host, Tello.CONTROL_UDP_PORT))
+        TelloLogger.info(f"Tello {str(self)} initialized.")
 
     def set_send_command_fn(self, fn) -> None:
         """Set the function to use for sending commands to the Tello.
@@ -114,18 +114,16 @@ class Tello:
         """Setup UDP receiver. This method listens for control packets from Tello."""
         
         address = address[0]
-        TelloLogger.debug('Data received from {} at client_socket'.format(address))
-
         if address == self.address[0]:
+            TelloLogger.debug(f'Data received from {str(self)} at client_socket')
             self.get_own_udp_object()['responses'].append(data)
 
     def udp_state_receiver(self, data, address) -> None:
         """Setup UDP receiver. This method listens for state packets from Tello."""
 
         address = address[0]
-        TelloLogger.debug('Data received from {} at state_socket'.format(address))
-
         if address == self.address[0]:
+            TelloLogger.debug(f'Data received from {str(self)} at state_socket')
             data = data.decode('ASCII')
             self.get_own_udp_object()['state'] = self.parse_state(data)
             self.last_state_update = time.time()
@@ -135,7 +133,7 @@ class Tello:
         Internal method, you normally wouldn't call this yourself.
         """
         state = state.strip()
-        TelloLogger.debug('Raw state data: {}'.format(state))
+        TelloLogger.debug(f'Raw state data: {state}')
 
         if state == 'ok':
             return {}
@@ -154,7 +152,7 @@ class Tello:
                 try:
                     value = num_type(value)
                 except ValueError as e:
-                    TelloLogger.debug('Error parsing state value for {}: {} to {}'.format(key, value, num_type))
+                    TelloLogger.debug(f'Error parsing state value for {key}: {value} to {num_type}')
                     TelloLogger.error(e)
                     continue
 
@@ -353,10 +351,10 @@ class Tello:
         # So wait at least self.TIME_BTW_COMMANDS seconds
         diff = time.time() - self.last_received_command_timestamp
         if diff < self.TIME_BTW_COMMANDS:
-            TelloLogger.debug('Waiting {} seconds to execute command: {}...'.format(diff, command))
+            TelloLogger.debug(f'Waiting {diff} seconds to execute command: {command} to {str(self)}...')
             time.sleep(diff)
 
-        TelloLogger.info("Send command: '{}'".format(command))
+        TelloLogger.info(f"Send command: '{command}' to {str(self)}")
         timestamp = time.time()
 
         self.send_command_fn(command, self.address)
@@ -365,7 +363,7 @@ class Tello:
 
         while not responses:
             if time.time() - timestamp > timeout:
-                message = "Aborting command '{}'. Did not receive a response after {} seconds".format(command, timeout)
+                message = f"Aborting command '{command}' to {str(self)}. Did not receive a response after {timeout} seconds"
                 TelloLogger.warning(message)
                 return message
             time.sleep(0.1)  # Sleep during send command
@@ -380,7 +378,7 @@ class Tello:
             return "response decode error"
         response = response.rstrip("\r\n")
 
-        TelloLogger.info("Response {}: '{}'".format(command, response))
+        TelloLogger.info(f"Response {command}: '{response}' from {str(self)}")
         return response
 
     def send_command_without_return(self, command: str) -> None:
@@ -389,7 +387,7 @@ class Tello:
         """
         # Commands very consecutive makes the drone not respond to them. So wait at least self.TIME_BTW_COMMANDS seconds
 
-        TelloLogger.info("Send command (no response expected): '{}'".format(command))
+        TelloLogger.info(f"Send command (no response expected): '{command}' to {str(self)}")
         self.send_command_fn(command, self.address)
 
     def send_control_command(self, command: str, timeout: int = RESPONSE_TIMEOUT) -> bool:
@@ -403,7 +401,7 @@ class Tello:
             if 'ok' in response.lower():
                 return True
 
-            TelloLogger.debug("Command attempt #{} failed for command: '{}'".format(i, command))
+            TelloLogger.debug(f"Command attempt #{i} failed for command: '{command}' to {str(self)}")
 
         self.raise_result_error(command, response)
         return False # never reached
@@ -447,7 +445,7 @@ class Tello:
         Internal method, you normally wouldn't call this yourself.
         """
         tries = 1 + self.retry_count
-        TelloLogger.error("Command '{}' was unsuccessful for {} tries. Latest response:\t'{}'".format(command, tries, response))
+        TelloLogger.error(f"Command '{command}' to {str(self)} was unsuccessful for {tries} tries. Latest response:\t'{response}'")
         # raise TelloException("Command '{}' was unsuccessful for {} tries. Latest response:\t'{}'".format(command, tries, response))
 
     def connect(self, wait_for_state=True) -> None:
@@ -460,7 +458,7 @@ class Tello:
             for i in range(REPS):
                 if self.get_current_state():
                     t = i / REPS  # in seconds
-                    TelloLogger.debug("'.connect()' received first state packet after {} seconds".format(t))
+                    TelloLogger.debug(f"Tello {str(self)} '.connect()' received first state packet after {t} seconds")
                     break
                 time.sleep(1 / REPS)
 
@@ -468,6 +466,7 @@ class Tello:
                 TelloLogger.error('Did not receive a state packet from the Tello')
                 # raise TelloException('Did not receive a state packet from the Tello')
             else:
+                TelloLogger.info(f"Tello {str(self)} connected.")
                 self.tello_connected_handler(self)
 
     def send_keepalive(self) -> None:
@@ -939,7 +938,7 @@ class Tello:
             pass
 
     def __str__(self) -> str:
-        return f"{{ id: {self.tello_id}, host: {self.address[0]}, vs_port: {self.vs_port}}}"
+        return f"{{id: {self.tello_id}, host: {self.address[0]}}}"
 
     def __del__(self):
         self.end()
