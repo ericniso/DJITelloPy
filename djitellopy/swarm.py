@@ -226,6 +226,17 @@ class TelloSwarm:
 
         self.communication.remove_video_stream_multicast_destination(local_port, destination_multicast_ip, destination_multicast_port)
 
+    def get_tello_state(self) -> List[Dict]:
+        
+        tello_state = []
+        for tello in self.connected_tellos:
+            tello_state.append({
+                'id': tello.tello_id,
+                'state': tello.get_current_state()
+            })
+        
+        return tello_state
+
     def __getattr__(self, attr) -> Callable:
         """Call a standard tello function in parallel on all tellos.
 
