@@ -226,7 +226,7 @@ class TelloSwarm:
 
         self.communication.remove_video_stream_multicast_destination(local_port, destination_multicast_ip, destination_multicast_port)
 
-    def get_tello_state(self) -> List[Dict]:
+    def get_swarm_state(self) -> List[Dict]:
         
         tello_state = []
         for tello in self.connected_tellos:
