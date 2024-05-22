@@ -16,7 +16,7 @@ class TelloSwarm:
     """
 
     @staticmethod
-    def fromJsonFile(path: str, iface_ip: str, forward_video_stream: bool = False) -> 'TelloSwarm':
+    def fromJsonFile(path: str, iface_ip: str, forward_video_stream: bool = False, tello_connected_handler: Callable[[Tello], None] = None) -> 'TelloSwarm':
         """Create TelloSwarm from a json file. The file should contain a list of IP addresses.
 
         The json structure should look like this:
@@ -37,10 +37,10 @@ class TelloSwarm:
         with open(path, 'r', encoding='utf-8') as fd:
             definition = json.load(fd)
 
-        return TelloSwarm.fromJsonList(definition, iface_ip, forward_video_stream)
+        return TelloSwarm.fromJsonList(definition, iface_ip, forward_video_stream, tello_connected_handler)
 
     @staticmethod
-    def fromJsonList(definition: list, iface_ip: str, forward_video_stream: bool = False) -> 'TelloSwarm':
+    def fromJsonList(definition: list, iface_ip: str, forward_video_stream: bool = False, tello_connected_handler: Callable[[Tello], None] = None) -> 'TelloSwarm':
         """Create TelloSwarm from a json object.
 
         The json structure should look like this:
@@ -62,7 +62,7 @@ class TelloSwarm:
         for d in definition:
             tellos.append(Tello(tello_id=d['id'], host=d['ip'], vs_port=d['vs_port']))
 
-        return TelloSwarm(definition, tellos, iface_ip, forward_video_stream)
+        return TelloSwarm(definition, tellos, iface_ip, forward_video_stream, tello_connected_handler)
 
     def __init__(self, definition: List[Dict], tellos: List[Tello], iface_ip: str, forward_video_stream: bool = False, tello_connected_handler: Callable[[Tello], None] = None) -> None:
         """Initialize a TelloSwarm instance
