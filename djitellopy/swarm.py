@@ -229,12 +229,22 @@ class TelloSwarm:
     def get_swarm_state(self) -> List[Dict]:
         
         tello_state = []
+
+        # Connected tellos
         for tello in self.connected_tellos:
             tello_state.append({
                 'id': tello.tello_id,
+                'connected': True,
                 'state': tello.get_current_state()
             })
-        
+        # Disconnected
+        for tello in self.unreachable_tellos:
+            tello_state.append({
+                'id': tello.tello_id,
+                'connected': False,
+                'state': tello.get_current_state()
+            })
+
         return tello_state
 
     def __getattr__(self, attr) -> Callable:
